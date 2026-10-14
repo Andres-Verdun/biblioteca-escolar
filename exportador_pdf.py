@@ -13,14 +13,16 @@ libro, cuando la GUI así lo solicita.
 """
 
 import io
+from xml.sax.saxutils import escape
 from datetime import datetime
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib.units import cm
+from reportlab.pdfbase.pdfmetrics import stringWidth
 from reportlab.platypus import (
     SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image,
 )
-from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 
 # Alto máximo, en centímetros, de la miniatura de portada dentro de la tabla.
 ALTO_MAXIMO_MINIATURA = 2.0 * cm
@@ -47,6 +49,10 @@ class ExportadorPDF:
           indica, se agrega una primera columna con las miniaturas.
         - encabezado_imagen: título de esa primera columna.
         """
+        if not encabezados:
+            raise ValueError("Debe haber al menos una columna para exportar.")
+        if any(len(fila) != len(encabezados) for fila in filas):
+            raise ValueError("Las filas deben coincidir con las columnas del reporte.")
         documento = SimpleDocTemplate(
             ruta_archivo, pagesize=landscape(A4),
             topMargin=1.5 * cm, bottomMargin=1.5 * cm,
@@ -72,7 +78,43 @@ class ExportadorPDF:
         else:
             datos_tabla = [list(encabezados)] + [list(fila) for fila in filas]
 
-        tabla = Table(datos_tabla, repeatRows=1)
+        # Anchos proporcionales: textos largos se envuelven en lugar de
+        # empujar la tabla fuera de la página al añadir CDD y clasificación.
+        pesos = {"ID": 0.45, "Título": 2.6, "Autor": 1.8, "Editorial": 1.5,
+                 "ISBN": 1.4, "Género": 1.2, "Edad": 0.9, "Ciclo": 1.2,
+                 "Stock": 0.55, "Disp.": 0.55, "Tapa": 0.55, "CDD": 1.15,
+                 "Clasificación": 2.6, "Portada": 0.85}
+        titulos = datos_tabla[0]
+        factores = [pesos.get(str(titulo), 1.6) for titulo in titulos]
+        preferidos = [documento.width * factor / sum(factores) for factor in factores]
+        minimos = [max(22, stringWidth(str(t), "Helvetica-Bold", 7.5) + 12) for t in titulos]
+        if sum(minimos) < documento.width:
+            flexibles = [max(0, ancho - minimo) for ancho, minimo in zip(preferidos, minimos)]
+            sobrante = documento.width - sum(minimos)
+            total_flexible = sum(flexibles) or len(flexibles)
+            anchos = [minimo + sobrante * (flex if sum(flexibles) else 1) / total_flexible
+                      for minimo, flex in zip(minimos, flexibles)]
+        else:
+            anchos = preferidos
+        celda_estilo = ParagraphStyle("Celda", fontName="Helvetica", fontSize=7.5,
+                                      leading=10, splitLongWords=True)
+        cabecera_estilo = ParagraphStyle("Cabecera", parent=celda_estilo,
+                                         fontName="Helvetica-Bold", textColor=colors.white)
+        def texto_seguro(valor, estilo):
+            texto = "" if valor is None else str(valor)
+            return Paragraph(escape(texto).replace("\n", "<br/>"), estilo)
+        datos_tabla[0] = [texto_seguro(titulo, cabecera_estilo) for titulo in titulos]
+        for indice in range(1, len(datos_tabla)):
+            for col, celda in enumerate(datos_tabla[indice]):
+                if isinstance(celda, Image) and celda.drawWidth > anchos[col] - 12:
+                    escala = max(1, anchos[col] - 12) / celda.drawWidth
+                    celda.drawWidth *= escala
+                    celda.drawHeight *= escala
+            datos_tabla[indice] = [
+                celda if isinstance(celda, Image) else texto_seguro(celda, celda_estilo)
+                for celda in datos_tabla[indice]
+            ]
+        tabla = Table(datos_tabla, colWidths=anchos, repeatRows=1, hAlign="LEFT")
         estilo = [
             ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#2c3e50")),
             ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),

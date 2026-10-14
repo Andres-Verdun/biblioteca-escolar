@@ -43,8 +43,8 @@ R es referencia; RE, enciclopedias; L, legislación; S, secundaria; EGB se
 identifica por ciclo (1-E/2-E/3-E); PL, Polimodal. Son denominaciones del manual
 histórico, independientes del campo Ciclo del formulario.
 
-`cdd_bnm.csv` contiene **132 entradas seleccionadas**: 124 del manual BNM y
-8 equivalencias de fichas editoriales y catálogos bibliotecarios. La columna
+`cdd_bnm.csv` contiene **190 entradas seleccionadas**: 175 del manual BNM y
+15 equivalencias de fichas editoriales y catálogos bibliotecarios. La columna
 `fuente` conserva la referencia de cada equivalencia; cuando está vacía se
 utiliza el manual BNM. Las páginas del manual se cuentan desde 1 del PDF.
 Las fuentes y páginas se conservan como documentación interna y no aparecen
@@ -66,14 +66,18 @@ cualquier notación que pueda aparecer impresa en un libro.
 Se actualiza el catálogo al iniciar sin borrar libros, préstamos o códigos
 registrados. Libro y notación se guardan en una única transacción. La notación
 es opcional: dejarla vacía al modificar elimina sólo ese dato.
-La clasificación se consulta en el formulario y el selector; no se agregaron
-filtros ni columnas CDD a los reportes PDF en esta etapa.
+La notación y su clasificación aparecen en el formulario, el catálogo de
+libros, los resultados de búsqueda y sus reportes PDF. Los libros sin notación
+muestran ambas columnas vacías. Los códigos desconocidos conservan el aviso
+de revisión; la búsqueda no deduce clasificaciones desde el título del libro.
 
 ## Ejecutar y comprobar
 
 ```bash
 python -m pip install pillow reportlab
 python main.py
+# Sólo para las pruebas de PDF (no es requisito para ejecutar el programa):
+python -m pip install pymupdf
 python -m unittest discover -s tests -v
 ```
 
@@ -87,7 +91,7 @@ una copia de `biblioteca.db`. Conservar esa base junto al nuevo ejecutable.
 
 ## Equivalencias complementarias
 
-Los rótulos de las ocho entradas complementarias son descripciones prácticas
+Los rótulos de las quince entradas complementarias son descripciones prácticas
 basadas en los usos de las fichas citadas en el CSV. No son una transcripción
 de encabezamientos oficiales de una edición completa de CDD, ni equivalencias
 atribuidas al manual BNM. No determinan por sí solos la edad recomendada.
@@ -95,3 +99,32 @@ atribuidas al manual BNM. No determinan por sí solos la edad recomendada.
 Al iniciar, la aplicación incorpora las entradas nuevas también a bases
 existentes: los libros con `A863` o `372.7` ya guardados muestran automáticamente
 la clasificación actualizada, sin volver a cargarlos.
+
+## Columnas visibles y Tercer Ciclo
+
+En **Libros** y **Búsqueda avanzada**, abrir **Columnas visibles** y marcar
+o desmarcar ID, título, autor, editorial, ISBN, género, edad, ciclo, stock,
+disponibles, tapa, CDD o clasificación. Siempre debe quedar al menos una
+columna. **Mostrar todas** restaura el listado completo. Las barras de
+desplazamiento permiten ver las columnas anchas.
+
+La elección se mantiene al buscar, ordenar o limpiar filtros durante la
+sesión; cada tabla tiene su selección independiente. El PDF exporta sólo
+las columnas visibles y en ese orden, con el mismo orden de filas. Ajusta
+el ancho a la página y envuelve los textos largos. La opción **Incluir
+portadas en el PDF** agrega las imágenes aunque el ID esté oculto.
+
+**Tercer Ciclo** está disponible al cargar/modificar libros y en el filtro
+de búsqueda. No modifica los ciclos de los libros ya guardados.
+
+### Nuevas notaciones
+
+Entre las incorporaciones: 306.43 (sociología de la educación), A860, A861,
+A862, A864, A861.9282, A863.9282; diccionarios R y enciclopedias RE por tema;
+371.102 y sus notaciones de didáctica; geología, paleontología, biología,
+ecología, botánica y zoología. Cada equivalencia conserva su fuente. Los
+prefijos de letras se interpretan sólo si están documentados en el catálogo.
+
+Las pruebas de interfaz se ejecutan cuando hay pantalla disponible (DISPLAY
+en Linux/Xvfb o una sesión Windows). Comprueban el menú de columnas, Tercer
+Ciclo, selección de libros y PDFs con ID oculto y portadas.

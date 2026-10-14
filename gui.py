@@ -42,6 +42,20 @@ def _validar_fecha(texto):
         return False
 
 
+def _datos_columnas_visibles(tabla, filas):
+    """Proyecta datos y encabezados según displaycolumns sin perder el orden."""
+    columnas = tuple(tabla["columns"])
+    visibles = tabla["displaycolumns"]
+    if isinstance(visibles, str):
+        visibles = tabla.tk.splitlist(visibles)
+    if tuple(visibles) == ("#all",):
+        visibles = columnas
+    indices = [columnas.index(tabla.column(col, "id")) for col in visibles]
+    encabezados = [tabla.heading(columnas[i], "text") for i in indices]
+    datos = [tuple(fila[i] if i < len(fila) else "" for i in indices) for fila in filas]
+    return encabezados, datos
+
+
 class AplicacionBiblioteca(tk.Tk):
     """Ventana principal del sistema de gestión de biblioteca escolar."""
 
@@ -311,17 +325,21 @@ class AplicacionBiblioteca(tk.Tk):
                          variable=self.var_pdf_portadas_libros).pack(side="right", padx=4)
 
         columnas = ("id", "titulo", "autor", "editorial", "isbn", "genero", "edad",
-                    "ciclo", "stock", "disponibles", "tapa")
+                    "ciclo", "stock", "disponibles", "tapa", "cdd", "clasificacion")
         encabezados = ("ID", "Título", "Autor", "Editorial", "ISBN", "Género", "Edad",
-                       "Ciclo", "Stock", "Disp.", "Tapa")
-        self.tabla_libros = ttk.Treeview(contenedor, columns=columnas, show="headings", height=14)
+                       "Ciclo", "Stock", "Disp.", "Tapa", "CDD", "Clasificación")
+        marco_tabla = ttk.Frame(contenedor)
+        marco_tabla.pack(fill="both", expand=True, padx=8, pady=(0, 8))
+        self.tabla_libros = ttk.Treeview(marco_tabla, columns=columnas, show="headings", height=14)
         for col, enc in zip(columnas, encabezados):
             self.tabla_libros.heading(col, text=enc)
             self.tabla_libros.column(col, width=100, anchor="center")
         self.tabla_libros.column("titulo", width=180, anchor="w")
         self.tabla_libros.column("autor", width=140, anchor="w")
         self.tabla_libros.column("tapa", width=60, anchor="center")
-        self.tabla_libros.pack(fill="both", expand=True, padx=8, pady=(0, 8))
+        self.tabla_libros.column("cdd", width=110, anchor="w", stretch=False)
+        self.tabla_libros.column("clasificacion", width=300, anchor="w")
+        self._configurar_tabla_columnas(marco_tabla, self.tabla_libros, panel_botones)
         self.tabla_libros.bind("<<TreeviewSelect>>", self._seleccionar_libro)
 
     # ------------------------------------------------------------------
@@ -553,20 +571,33 @@ class AplicacionBiblioteca(tk.Tk):
         self._mostrar_portada(self.lbl_portada_libro, self._portada_libro_actual,
                                "_imagen_portada_libro")
 
+    def _filas_libros(self, libros):
+        codigos = cdd.obtener_codigos()
+        clasificaciones = {}
+        for libro in libros:
+            codigo = codigos.get(libro.id_libro, "")
+            if codigo not in clasificaciones:
+                if not codigo:
+                    clasificaciones[codigo] = ""
+                else:
+                    try:
+                        clasificaciones[codigo] = cdd.clasificar(codigo).texto()
+                    except ValueError:
+                        clasificaciones[codigo] = "Notación pendiente de revisión"
+            yield (
+                libro.id_libro, libro.titulo, libro.autor, libro.editorial, libro.isbn,
+                libro.genero, libro.edad_recomendada, libro.ciclo, libro.stock, libro.disponibles,
+                "Sí" if libro.tiene_portada() else "-", codigo, clasificaciones[codigo],
+            )
+
     def _refrescar_libros(self):
         for fila in self.tabla_libros.get_children():
             self.tabla_libros.delete(fila)
-        for libro in self.libro_dao.obtener_todos():
-            self.tabla_libros.insert("", "end", values=(
-                libro.id_libro, libro.titulo, libro.autor, libro.editorial, libro.isbn,
-                libro.genero, libro.edad_recomendada, libro.ciclo, libro.stock, libro.disponibles,
-                "Sí" if libro.tiene_portada() else "-",
-            ))
+        for fila in self._filas_libros(self.libro_dao.obtener_todos()):
+            self.tabla_libros.insert("", "end", values=fila)
 
     def _exportar_libros_pdf(self):
         self._exportar_treeview_pdf(self.tabla_libros, "Catálogo de libros",
-                                     ("ID", "Título", "Autor", "Editorial", "ISBN",
-                                      "Género", "Edad", "Ciclo", "Stock", "Disp.", "Tapa"),
                                      incluir_portadas=self.var_pdf_portadas_libros.get())
 
     # ==================================================================
@@ -1018,9 +1049,7 @@ class AplicacionBiblioteca(tk.Tk):
             ))
 
     def _exportar_prestamos_pdf(self):
-        self._exportar_treeview_pdf(self.tabla_prestamos, "Listado de préstamos",
-                                     ("ID", "Libro", "Solicitante", "Tipo", "F. Préstamo",
-                                      "F. Dev. Estimada", "F. Dev. Real", "Estado"))
+        self._exportar_treeview_pdf(self.tabla_prestamos, "Listado de préstamos")
 
     # ==================================================================
     # TAB BÚSQUEDA AVANZADA
@@ -1094,9 +1123,9 @@ class AplicacionBiblioteca(tk.Tk):
                          variable=self.var_pdf_portadas_busqueda).pack(side="right", padx=4)
 
         columnas = ("id", "titulo", "autor", "editorial", "isbn", "genero", "edad",
-                    "ciclo", "stock", "disponibles", "tapa")
+                    "ciclo", "stock", "disponibles", "tapa", "cdd", "clasificacion")
         encabezados = ("ID", "Título", "Autor", "Editorial", "ISBN", "Género", "Edad",
-                       "Ciclo", "Stock", "Disp.", "Tapa")
+                       "Ciclo", "Stock", "Disp.", "Tapa", "CDD", "Clasificación")
         # Columnas cuyo encabezado permite reordenar los resultados, y el
         # criterio de ORDENES_BUSQUEDA al que corresponde cada una.
         orden_por_columna = {
@@ -1108,7 +1137,9 @@ class AplicacionBiblioteca(tk.Tk):
             "edad": ("Edad recomendada",),
             "stock": ("Stock (menor a mayor)", "Stock (mayor a menor)"),
         }
-        self.tabla_busqueda = ttk.Treeview(contenedor, columns=columnas, show="headings", height=13)
+        marco_tabla = ttk.Frame(contenedor)
+        marco_tabla.pack(fill="both", expand=True, padx=8, pady=(0, 8))
+        self.tabla_busqueda = ttk.Treeview(marco_tabla, columns=columnas, show="headings", height=13)
         for col, enc in zip(columnas, encabezados):
             if col in orden_por_columna:
                 self.tabla_busqueda.heading(
@@ -1120,8 +1151,47 @@ class AplicacionBiblioteca(tk.Tk):
         self.tabla_busqueda.column("titulo", width=180, anchor="w")
         self.tabla_busqueda.column("autor", width=140, anchor="w")
         self.tabla_busqueda.column("tapa", width=60, anchor="center")
-        self.tabla_busqueda.pack(fill="both", expand=True, padx=8, pady=(0, 8))
+        self.tabla_busqueda.column("cdd", width=110, anchor="w", stretch=False)
+        self.tabla_busqueda.column("clasificacion", width=300, anchor="w")
+        self._configurar_tabla_columnas(marco_tabla, self.tabla_busqueda, panel_botones)
         self.tabla_busqueda.bind("<<TreeviewSelect>>", self._seleccionar_libro_busqueda)
+
+    def _configurar_tabla_columnas(self, marco, tabla, panel_botones):
+        """Columnas visibles por tabla; ocultarlas no cambia los datos de las filas."""
+        marco.rowconfigure(0, weight=1)
+        marco.columnconfigure(0, weight=1)
+        tabla.grid(row=0, column=0, sticky="nsew")
+        vertical = ttk.Scrollbar(marco, orient="vertical", command=tabla.yview)
+        vertical.grid(row=0, column=1, sticky="ns")
+        horizontal = ttk.Scrollbar(marco, orient="horizontal", command=tabla.xview)
+        horizontal.grid(row=1, column=0, sticky="ew")
+        tabla.configure(yscrollcommand=vertical.set, xscrollcommand=horizontal.set)
+        boton = ttk.Menubutton(panel_botones, text="Columnas visibles")
+        boton.pack(side="left", padx=4)
+        menu = tk.Menu(boton, tearoff=0)
+        boton.configure(menu=menu)
+        columnas = tuple(tabla["columns"])
+        variables = {col: tk.BooleanVar(master=self, value=True) for col in columnas}
+        # Mantener referencias vivas para los checkbuttons de Tk.
+        tabla._columnas_visibles = variables
+
+        def aplicar(columna):
+            visibles = tuple(col for col in columnas if variables[col].get())
+            if not visibles:
+                variables[columna].set(True)
+                return
+            tabla.configure(displaycolumns=visibles)
+
+        def mostrar_todas():
+            for var in variables.values():
+                var.set(True)
+            tabla.configure(displaycolumns=columnas)
+
+        for col in columnas:
+            menu.add_checkbutton(label=tabla.heading(col, "text"), variable=variables[col],
+                                 command=lambda c=col: aplicar(c))
+        menu.add_separator()
+        menu.add_command(label="Mostrar todas", command=mostrar_todas)
 
     def _ordenar_por_columna(self, criterios):
         """
@@ -1174,37 +1244,29 @@ class AplicacionBiblioteca(tk.Tk):
         )
         for fila in self.tabla_busqueda.get_children():
             self.tabla_busqueda.delete(fila)
-        for libro in resultados:
-            self.tabla_busqueda.insert("", "end", values=(
-                libro.id_libro, libro.titulo, libro.autor, libro.editorial, libro.isbn,
-                libro.genero, libro.edad_recomendada, libro.ciclo, libro.stock, libro.disponibles,
-                "Sí" if libro.tiene_portada() else "-",
-            ))
+        for fila in self._filas_libros(resultados):
+            self.tabla_busqueda.insert("", "end", values=fila)
         self._mostrar_portada(self.lbl_portada_busqueda, None, "_imagen_portada_busqueda")
         if not resultados and avisar_si_vacio:
             messagebox.showinfo("Búsqueda", "No se encontraron libros con esos criterios.")
 
     def _exportar_busqueda_pdf(self):
         self._exportar_treeview_pdf(self.tabla_busqueda, "Resultados de búsqueda avanzada",
-                                     ("ID", "Título", "Autor", "Editorial", "ISBN",
-                                      "Género", "Edad", "Ciclo", "Stock", "Disp.", "Tapa"),
                                      incluir_portadas=self.var_pdf_portadas_busqueda.get())
 
     # ==================================================================
     # Exportación a PDF (genérica, a partir de cualquier Treeview)
     # ==================================================================
-    def _exportar_treeview_pdf(self, treeview, titulo_reporte, encabezados,
+    def _exportar_treeview_pdf(self, treeview, titulo_reporte,
                                 incluir_portadas=False):
-        """
-        Genera el PDF con las filas que se están viendo en la tabla indicada.
-
-        Si 'incluir_portadas' es True, se agrega al comienzo de cada fila la
-        imagen pequeña de la tapa del libro (la primera columna de la tabla
-        debe ser el ID del libro).
-        """
-        filas = [treeview.item(item, "values") for item in treeview.get_children()]
-        if not filas:
+        """Exporta sólo las columnas visibles; conserva el ID interno para las tapas."""
+        filas_completas = [treeview.item(item, "values") for item in treeview.get_children()]
+        if not filas_completas:
             messagebox.showwarning("Sin datos", "No hay registros para exportar.")
+            return
+        encabezados, filas = _datos_columnas_visibles(treeview, filas_completas)
+        if not encabezados:
+            messagebox.showwarning("Sin columnas", "Seleccione al menos una columna visible.")
             return
 
         nombre_sugerido = titulo_reporte.lower().replace(" ", "_") + ".pdf"
@@ -1215,7 +1277,7 @@ class AplicacionBiblioteca(tk.Tk):
         if not destino:
             return
 
-        miniaturas = self._obtener_miniaturas(filas) if incluir_portadas else None
+        miniaturas = self._obtener_miniaturas(filas_completas) if incluir_portadas else None
 
         try:
             ExportadorPDF.exportar(destino, titulo_reporte, list(encabezados), filas,

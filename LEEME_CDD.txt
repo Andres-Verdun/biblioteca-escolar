@@ -1,7 +1,7 @@
 Biblioteca Escolar 360 — Notaciones-CDD
 
 Consultar README.md para las instrucciones y el alcance.
-El catálogo contiene 132 entradas: 124 del manual BNM y 8 complementarias.
+El catálogo contiene 190 entradas: 175 del manual BNM y 15 complementarias.
 Se agregaron 635.9, 372.7, A863, 863.9282, 861.9282, 862.9282, 808.068 y 808.0683.
 El resultado muestra sólo la clasificación; las fuentes quedan documentadas
 en el CSV y la base de datos. Catálogo CDD permite buscar y elegir.
@@ -14,3 +14,8 @@ se busca en el padre más cercano, sin inventar una subclasificación.
 Se conservan los libros, préstamos y notaciones existentes. El catálogo
 se actualiza al iniciar. Respaldar biblioteca.db antes de actualizar el EXE.
 Ejecutar USAR_ESTE_generar_ejecutable.bat para incorporar estos cambios.
+
+CDD y Clasificación aparecen en Libros y Búsqueda avanzada.
+Columnas visibles permite ocultar/restaurar columnas en cada tabla.
+El PDF respeta las columnas visibles, incluso si se oculta el ID.
+Se agregó Tercer Ciclo al formulario y a los filtros.

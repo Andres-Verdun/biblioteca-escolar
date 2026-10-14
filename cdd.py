@@ -177,3 +177,12 @@ def obtener(id_libro):
         return fila["codigo"] if fila else ""
     finally:
         ConexionDB.cerrar(con)
+
+
+def obtener_codigos():
+    """Carga las notaciones en una consulta para armar listados sin N consultas."""
+    con = ConexionDB.conectar()
+    try:
+        return dict(con.execute("SELECT id_libro,codigo FROM libro_cdd").fetchall())
+    finally:
+        ConexionDB.cerrar(con)

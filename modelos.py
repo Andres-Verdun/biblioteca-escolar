@@ -14,7 +14,7 @@ GENEROS = [
     "Cómic/Historieta", "Divulgación", "Enciclopedia", "Otro",
 ]
 
-CICLOS = ["Inicial", "Primer Ciclo", "Segundo Ciclo"]
+CICLOS = ["Inicial", "Primer Ciclo", "Segundo Ciclo", "Tercer Ciclo"]
 
 EDADES_RECOMENDADAS = ["3-5 años", "6-8 años", "9-11 años", "12-13 años"]
 
