@@ -1,0 +1,3 @@
+Se corrigió la validación para aceptar prefijos de letras unidos al número, como A863, sin obligar a insertar un espacio. El dato se guarda tal como se ingresa. La descripción automática solo aparecerá si el código exacto está en cdd_bnm.csv.
+GENERACIÓN: ejecutar USAR_ESTE_generar_ejecutable.bat después de extraer el ZIP.
+ANTES: respaldar biblioteca.db y reemplazar solo el archivo EXE anterior.
