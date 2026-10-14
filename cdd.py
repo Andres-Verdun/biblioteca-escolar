@@ -1,4 +1,4 @@
-"""Consulta local de notaciones BNM, separando CDD y sectores basados en CDU."""
+"""Notaciones verificadas en BNM, fichas editoriales y catálogos bibliotecarios."""
 import csv
 import os
 import re
@@ -14,8 +14,8 @@ SECTORES = {
     "2-E": "EGB, segundo ciclo", "3-E": "EGB, tercer ciclo",
     "PL": "Polimodal",
 }
-# También se conservan prefijos locales anteriores (p. ej. A863), sin
-# atribuirles una equivalencia BNM que no esté documentada en el catálogo.
+# Se conservan prefijos locales. Sólo una equivalencia documentada
+# permite clasificarlos; A863 tiene su propia fuente complementaria.
 PATRON = re.compile(
     r"(?:(?P<prefijo>[123]-E|[A-Z]{1,3})\s*)?"
     r"(?P<numero>\d{1,3}(?:\.\d+)*(?:[/\-]\d+(?:\.\d+)*)*"
@@ -50,13 +50,13 @@ def codigo_valido(codigo):
 
 
 def inicializar():
-    """Agrega/actualiza el catálogo oficial sin alterar las notaciones de los libros."""
+    """Actualiza equivalencias y fuentes sin alterar las notaciones de los libros."""
     # Leer y validar antes de abrir la transacción: un CSV dañado no debe
     # dejar una importación parcial. Las páginas son las del PDF, desde 1.
     with open(_ruta_recurso("cdd_bnm.csv"), encoding="utf-8-sig", newline="") as archivo:
-        filas = [(normalizar(f["codigo"]), f["descripcion"].strip(), f.get("pagina", ""))
+        filas = [(normalizar(f["codigo"]), f["descripcion"].strip(), f.get("pagina", ""), f.get("fuente", "").strip() or FUENTE)
                  for f in csv.DictReader(archivo)]
-    if any(not codigo or not descripcion for codigo, descripcion, _ in filas):
+    if any(not codigo or not descripcion for codigo, descripcion, _, _ in filas):
         raise ValueError("El catálogo CDD contiene una entrada vacía.")
     con = ConexionDB.conectar()
     try:
@@ -66,13 +66,12 @@ def inicializar():
             con.executemany("""INSERT INTO cdd_bnm (codigo,descripcion,pagina,fuente)
                 VALUES (?,?,?,?) ON CONFLICT(codigo) DO UPDATE SET
                 descripcion=excluded.descripcion,pagina=excluded.pagina,fuente=excluded.fuente""",
-                [(codigo, descripcion, pagina, FUENTE) for codigo, descripcion, pagina in filas])
+                filas)
     finally:
         ConexionDB.cerrar(con)
 
 
-def consultar(codigo):
-    """Coincidencia exacta; E se admite como alias del tercer ciclo 3-E."""
+def _consultar_detalle(codigo):
     codigo = normalizar(codigo)
     if not codigo:
         return None
@@ -80,10 +79,16 @@ def consultar(codigo):
         codigo = "3-" + codigo
     con = ConexionDB.conectar()
     try:
-        fila = con.execute("SELECT descripcion,pagina FROM cdd_bnm WHERE codigo=?", (codigo,)).fetchone()
-        return (fila["descripcion"], fila["pagina"]) if fila else None
+        fila = con.execute("SELECT descripcion,pagina,fuente FROM cdd_bnm WHERE codigo=?", (codigo,)).fetchone()
+        return tuple(fila) if fila else None
     finally:
         ConexionDB.cerrar(con)
+
+
+def consultar(codigo):
+    """Coincidencia exacta; E se admite como alias del tercer ciclo 3-E."""
+    fila = _consultar_detalle(codigo)
+    return fila[:2] if fila else None
 
 
 @dataclass(frozen=True)
@@ -94,13 +99,14 @@ class Clasificacion:
     estado: str  # exacta, general, pendiente, vacia
     pagina: str = ""
     codigo_base: str = ""
+    fuente: str = ""
 
     def texto(self):
         if self.estado == "vacia":
-            return "Ingrese una notación o elija una del catálogo BNM."
+            return "Ingrese una notación o elija una del catálogo."
         sector = f"{self.sector}. " if self.sector else ""
         if self.estado == "exacta":
-            return f"{sector}{self.descripcion} — BNM, pág. {self.pagina} del PDF."
+            return f"{sector}{self.descripcion}"
         if self.estado == "general":
             return (f"Categoría general: {self.descripcion} ({self.codigo_base}). "
                     "La subclasificación exacta requiere revisión.")
@@ -113,18 +119,25 @@ def clasificar(codigo):
         return Clasificacion("", "", "", "vacia")
     encontrado = PATRON.fullmatch(codigo)
     prefijo = encontrado.group("prefijo") or ""
-    sector = SECTORES.get(prefijo, "Prefijo local sin equivalencia BNM" if prefijo else "")
-    exacta = consultar(codigo)
+    sector = SECTORES.get(prefijo, "")
+    exacta = _consultar_detalle(codigo)
     if exacta:
-        return Clasificacion(codigo, sector, exacta[0], "exacta", exacta[1])
-    # Los sectores especiales usan CDU: R 800 NO es Literatura CDD.
-    # Sólo números CDD simples de tres cifras permiten categoría general.
+        return Clasificacion(codigo, sector, exacta[0], "exacta", exacta[1], fuente=exacta[2])
+    # Sólo CDD numérica simple admite aproximación jerárquica. Nunca
+    # quitar un prefijo ni reutilizar una equivalencia de CDU como CDD.
     numero = encontrado.group("numero")
     if not prefijo and re.fullmatch(r"\d{3}(?:\.\d+)?", numero):
-        base = numero[0] + "00"
-        general = consultar(base)
-        if general:
-            return Clasificacion(codigo, "", general[0], "general", general[1], base)
+        candidatos = []
+        if "." in numero:
+            entero, decimales = numero.split(".")
+            candidatos.extend(entero + "." + decimales[:n]
+                              for n in range(len(decimales) - 1, 0, -1))
+            candidatos.append(entero)
+        candidatos.extend([numero[:2] + "0", numero[0] + "00"])
+        for base in dict.fromkeys(candidatos):
+            general = _consultar_detalle(base)
+            if general:
+                return Clasificacion(codigo, "", general[0], "general", general[1], base, general[2])
     return Clasificacion(codigo, sector, "", "pendiente")
 
 

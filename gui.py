@@ -276,7 +276,7 @@ class AplicacionBiblioteca(tk.Tk):
         self.var_libro_cdd = tk.StringVar()
         entrada_cdd = ttk.Entry(panel_form, textvariable=self.var_libro_cdd, width=18)
         entrada_cdd.grid(row=2, column=1, padx=4, pady=4)
-        ttk.Button(panel_form, text="Catálogo BNM…", command=self._elegir_cdd).grid(row=2,column=2,padx=4)
+        ttk.Button(panel_form, text="Catálogo CDD…", command=self._elegir_cdd).grid(row=2,column=2,padx=4)
         self.var_cdd_descripcion = tk.StringVar(value="Ingrese el CDD impreso en el libro")
         ttk.Label(panel_form, textvariable=self.var_cdd_descripcion, wraplength=470).grid(row=2,column=3,columnspan=5,sticky="w",padx=4)
         self.var_libro_cdd.trace_add('write', lambda *_: self._consultar_cdd())
@@ -392,7 +392,7 @@ class AplicacionBiblioteca(tk.Tk):
 
     def _elegir_cdd(self):
         ventana = tk.Toplevel(self)
-        ventana.title("Notaciones verificadas — Biblioteca Nacional de Maestros")
+        ventana.title("Catálogo de notaciones verificadas")
         ventana.geometry("790x480")
         ventana.transient(self)
         ventana.grab_set()
@@ -402,8 +402,8 @@ class AplicacionBiblioteca(tk.Tk):
         entrada.pack(fill="x", padx=12)
         marco = ttk.Frame(ventana)
         marco.pack(fill="both", expand=True, padx=12, pady=8)
-        tabla = ttk.Treeview(marco, columns=("codigo", "descripcion", "pagina"), show="headings")
-        for col, titulo, ancho in [("codigo", "Notación", 135), ("descripcion", "Clasificación", 500), ("pagina", "Pág. PDF", 75)]:
+        tabla = ttk.Treeview(marco, columns=("codigo", "descripcion"), show="headings")
+        for col, titulo, ancho in [("codigo", "Notación", 135), ("descripcion", "Clasificación", 500)]:
             tabla.heading(col, text=titulo)
             tabla.column(col, width=ancho, anchor="w")
         barra = ttk.Scrollbar(marco, orient="vertical", command=tabla.yview)
@@ -414,7 +414,7 @@ class AplicacionBiblioteca(tk.Tk):
         def actualizar(*_):
             tabla.delete(*tabla.get_children())
             for fila in cdd.catalogo(filtro.get()):
-                tabla.insert("", "end", values=fila)
+                tabla.insert("", "end", values=fila[:2])
 
         def elegir(*_):
             seleccion = tabla.selection()
@@ -425,7 +425,7 @@ class AplicacionBiblioteca(tk.Tk):
         filtro.trace_add("write", actualizar)
         tabla.bind("<Double-1>", elegir)
         tabla.bind("<Return>", elegir)
-        ttk.Label(ventana, text="Catálogo parcial. R/RE/L/S/E/PL corresponden a sectores especiales del manual.\nE se admite como 3-E; A y otros prefijos locales quedan pendientes de revisión.", wraplength=740).pack(padx=12)
+        ttk.Label(ventana, text="Catálogo parcial de notaciones. E se admite como 3-E.\nSe reconocen las notaciones documentadas; los códigos desconocidos quedan para revisión.", wraplength=740).pack(padx=12)
         ttk.Button(ventana, text="Usar notación seleccionada", command=elegir).pack(pady=8)
         actualizar()
         entrada.focus_set()

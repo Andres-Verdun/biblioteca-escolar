@@ -46,11 +46,59 @@ class NotacionesCDDTest(unittest.TestCase):
         self.assertEqual(cdd.clasificar('800').descripcion, 'Literatura')
         self.assertIn('lingüística', cdd.clasificar('R800').descripcion)
         self.assertEqual(cdd.clasificar('R863').estado, 'pendiente')
-        self.assertEqual(cdd.clasificar('A863').estado, 'pendiente')
-        general = cdd.clasificar('863.9282')
+        self.assertEqual(cdd.clasificar('X863').estado, 'pendiente')
+        general = cdd.clasificar('863.9999')
         self.assertEqual(general.estado, 'general')
-        self.assertEqual(general.codigo_base, '800')
+        self.assertEqual(general.codigo_base, '863')
         self.assertIn('requiere revisión', general.texto())
+
+    def test_codigos_reportados_y_ampliacion(self):
+        casos = {
+            '370': 'Educación',
+            '372.7': 'Enseñanza de las matemáticas',
+            '635.9': 'Jardinería y floricultura',
+            'A863': 'Narrativa argentina',
+            '863.9282': 'Narrativa infantil y juvenil en español',
+            '861.9282': 'Poesía infantil en español',
+            '862.9282': 'Teatro infantil en español',
+            '808.068': 'Literatura infantil',
+            '808.068 3': 'Narrativa infantil',
+        }
+        for codigo, descripcion in casos.items():
+            with self.subTest(codigo=codigo):
+                resultado = cdd.clasificar(codigo)
+                self.assertEqual(resultado.estado, 'exacta')
+                self.assertEqual(resultado.texto(), descripcion)
+                self.assertNotIn('PDF', resultado.texto())
+                self.assertNotIn('pág.', resultado.texto())
+                self.assertTrue(resultado.fuente)
+        self.assertIn('bnm.educacion.gob.ar', cdd.clasificar('370').fuente)
+        self.assertIn('loqueleo.santillana.com', cdd.clasificar('863.9282').fuente)
+        self.assertNotIn('bnm.educacion.gob.ar', cdd.clasificar('A863').fuente)
+
+    def test_categoria_general_mas_cercana_y_prefijos(self):
+        self.assertEqual(cdd.clasificar('372.99').codigo_base, '370')
+        self.assertEqual(cdd.clasificar('372.99').descripcion, 'Educación')
+        self.assertEqual(cdd.clasificar('372.71').codigo_base, '372.7')
+        self.assertEqual(cdd.clasificar('635.91').codigo_base, '635.9')
+        self.assertEqual(cdd.clasificar('R 372.7').estado, 'pendiente')
+        self.assertEqual(cdd.clasificar('A863.9999').estado, 'pendiente')
+
+    def test_formulario_muestra_solo_clasificacion(self):
+        # Prueba el método real con variables Tcl: no requiere pantalla.
+        import tkinter as tk
+        from types import SimpleNamespace
+        from gui import AplicacionBiblioteca
+        interprete = tk.Tcl()
+        formulario = SimpleNamespace(
+            var_libro_cdd=tk.StringVar(interprete),
+            var_cdd_descripcion=tk.StringVar(interprete),
+        )
+        for codigo, descripcion in [('370', 'Educación'), ('372.7', 'Enseñanza de las matemáticas'),
+                                    ('A863', 'Narrativa argentina')]:
+            formulario.var_libro_cdd.set(codigo)
+            AplicacionBiblioteca._consultar_cdd(formulario)
+            self.assertEqual(formulario.var_cdd_descripcion.get(), descripcion)
 
     def test_actualizacion_de_catalogo_preserva_datos_previos(self):
         id_libro = LibroDAO().insertar(self.libro())
@@ -95,7 +143,7 @@ class NotacionesCDDTest(unittest.TestCase):
         codigos = [cdd.normalizar(f['codigo']) for f in filas]
         self.assertEqual(len(codigos), len(set(codigos)))
         self.assertEqual(len(cdd.catalogo()), len(filas))
-        self.assertEqual(cdd.catalogo('NARRATIVA ARGENTINA')[0][0], '863.9932')
+        self.assertEqual({fila[0] for fila in cdd.catalogo('NARRATIVA ARGENTINA')}, {'863.9932', 'A 863'})
         self.assertEqual(cdd.catalogo('sin resultados improbables'), [])
 
 

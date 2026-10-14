@@ -1,5 +1,8 @@
-A863 sigue siendo válido y se normaliza como A 863 al guardar.
-No se elimina el prefijo A ni se lo interpreta como un sector BNM documentado.
+A863 y A 863 se reconocen como Narrativa argentina.
+La equivalencia está documentada por la Biblioteca Nacional en la ficha de
+Tres historias pringlenses, de César Aira (2013):
+https://www.bn.gov.ar/micrositios/admin_assets/issues/files/6f9d6d4cfb07f8e0c88e0439898ee960.pdf
+
+No se elimina el prefijo A ni se atribuye esta equivalencia al manual BNM.
 Las notaciones históricas no se reescriben al iniciar la aplicación.
-La narrativa argentina verificada en el manual es 863.9932 (pág. 76 del PDF).
 Consultar README.md para el alcance de la rama Notaciones-CDD.
