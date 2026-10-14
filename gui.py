@@ -141,6 +141,7 @@ class AplicacionBiblioteca(tk.Tk):
             return
         try:
             shutil.copy(origen, ConexionDB.obtener_ruta())
+            cdd.inicializar()
             messagebox.showinfo(
                 "Restauración completa",
                 "Los datos se restauraron correctamente.",
@@ -271,14 +272,14 @@ class AplicacionBiblioteca(tk.Tk):
                    width=6).grid(row=1, column=7, sticky="w", padx=4, pady=4)
 
         # Clasificación Dewey según tabla local validada de BNM.
-        ttk.Label(panel_form, text="CDD impresa").grid(row=2, column=0, sticky="w", padx=4, pady=4)
+        ttk.Label(panel_form, text="Notación CDD/BNM").grid(row=2, column=0, sticky="w", padx=4, pady=4)
         self.var_libro_cdd = tk.StringVar()
         entrada_cdd = ttk.Entry(panel_form, textvariable=self.var_libro_cdd, width=18)
         entrada_cdd.grid(row=2, column=1, padx=4, pady=4)
-        ttk.Button(panel_form, text="Consultar CDD", command=self._consultar_cdd).grid(row=2,column=2,padx=4)
+        ttk.Button(panel_form, text="Catálogo BNM…", command=self._elegir_cdd).grid(row=2,column=2,padx=4)
         self.var_cdd_descripcion = tk.StringVar(value="Ingrese el CDD impreso en el libro")
         ttk.Label(panel_form, textvariable=self.var_cdd_descripcion, wraplength=470).grid(row=2,column=3,columnspan=5,sticky="w",padx=4)
-        entrada_cdd.bind('<FocusOut>', lambda _e: self._consultar_cdd())
+        self.var_libro_cdd.trace_add('write', lambda *_: self._consultar_cdd())
 
         # --- Vista previa de la portada -------------------------------------
         self._portada_libro_actual = None   # bytes de la tapa cargada en el formulario
@@ -383,17 +384,51 @@ class AplicacionBiblioteca(tk.Tk):
         self._mostrar_portada(self.lbl_portada_libro, None, "_imagen_portada_libro")
 
     def _consultar_cdd(self):
-        codigo = self.var_libro_cdd.get().strip()
-        if not cdd.codigo_valido(codigo):
-            self.var_cdd_descripcion.set('Código con formato inválido')
-            return
-        encontrado = cdd.consultar(codigo)
-        if encontrado:
-            self.var_cdd_descripcion.set(f"BNM: {encontrado[0]} (pág. {encontrado[1]})")
-        elif codigo:
-            self.var_cdd_descripcion.set('Sin coincidencia exacta en el catálogo local BNM; se conservará el código sin asignar categoría')
-        else:
-            self.var_cdd_descripcion.set('Ingrese el CDD impreso en el libro')
+        try:
+            resultado = cdd.clasificar(self.var_libro_cdd.get())
+            self.var_cdd_descripcion.set(resultado.texto())
+        except ValueError as error:
+            self.var_cdd_descripcion.set(str(error))
+
+    def _elegir_cdd(self):
+        ventana = tk.Toplevel(self)
+        ventana.title("Notaciones verificadas — Biblioteca Nacional de Maestros")
+        ventana.geometry("790x480")
+        ventana.transient(self)
+        ventana.grab_set()
+        ttk.Label(ventana, text="Buscar código o tema (ej.: narrativa, enciclopedias, matemáticas)").pack(padx=12, pady=8)
+        filtro = tk.StringVar()
+        entrada = ttk.Entry(ventana, textvariable=filtro)
+        entrada.pack(fill="x", padx=12)
+        marco = ttk.Frame(ventana)
+        marco.pack(fill="both", expand=True, padx=12, pady=8)
+        tabla = ttk.Treeview(marco, columns=("codigo", "descripcion", "pagina"), show="headings")
+        for col, titulo, ancho in [("codigo", "Notación", 135), ("descripcion", "Clasificación", 500), ("pagina", "Pág. PDF", 75)]:
+            tabla.heading(col, text=titulo)
+            tabla.column(col, width=ancho, anchor="w")
+        barra = ttk.Scrollbar(marco, orient="vertical", command=tabla.yview)
+        tabla.configure(yscrollcommand=barra.set)
+        barra.pack(side="right", fill="y")
+        tabla.pack(fill="both", expand=True)
+
+        def actualizar(*_):
+            tabla.delete(*tabla.get_children())
+            for fila in cdd.catalogo(filtro.get()):
+                tabla.insert("", "end", values=fila)
+
+        def elegir(*_):
+            seleccion = tabla.selection()
+            if seleccion:
+                self.var_libro_cdd.set(tabla.item(seleccion[0], "values")[0])
+                ventana.destroy()
+
+        filtro.trace_add("write", actualizar)
+        tabla.bind("<Double-1>", elegir)
+        tabla.bind("<Return>", elegir)
+        ttk.Label(ventana, text="Catálogo parcial. R/RE/L/S/E/PL corresponden a sectores especiales del manual.\nE se admite como 3-E; A y otros prefijos locales quedan pendientes de revisión.", wraplength=740).pack(padx=12)
+        ttk.Button(ventana, text="Usar notación seleccionada", command=elegir).pack(pady=8)
+        actualizar()
+        entrada.focus_set()
 
     def _limpiar_form_libro(self):
         self._id_libro_seleccionado = None
@@ -431,8 +466,7 @@ class AplicacionBiblioteca(tk.Tk):
             messagebox.showerror("CDD", "El código CDD tiene un formato inválido.")
             return
         try:
-            nuevo_id = self.libro_dao.insertar(libro)
-            cdd.guardar(nuevo_id, self.var_libro_cdd.get())
+            self.libro_dao.insertar(libro, codigo_cdd=self.var_libro_cdd.get())
         except Exception as error:
             messagebox.showerror("Error al guardar", f"No se pudo agregar el libro. "
                                                        f"Verifique que el ISBN no esté duplicado.\n{error}")
@@ -465,8 +499,7 @@ class AplicacionBiblioteca(tk.Tk):
             messagebox.showerror("CDD", "El código CDD tiene un formato inválido.")
             return
         try:
-            self.libro_dao.actualizar(libro)
-            cdd.guardar(self._id_libro_seleccionado, self.var_libro_cdd.get())
+            self.libro_dao.actualizar(libro, codigo_cdd=self.var_libro_cdd.get())
         except Exception as error:
             messagebox.showerror("Error al guardar", f"No se pudo modificar el libro.\n{error}")
             return

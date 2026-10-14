@@ -1,21 +1,16 @@
-Biblioteca Escolar 360 - Integración CDD (versión inicial)
+Biblioteca Escolar 360 — Notaciones-CDD
 
-1. Respaldar biblioteca.db antes de reemplazar cualquier archivo.
-2. Usar estos archivos junto con el proyecto original. Ejecutar python main.py.
-3. En Libros se incorporó "CDD impresa" y "Consultar CDD".
-4. Los códigos se almacenan por libro en una tabla nueva SIN modificar las existentes.
-5. El catálogo inicial sólo contiene las 11 categorías explícitamente validadas del manual BNM (pág. 5 del PDF; paginación interna distinta). NO es una transcripción completa de sus 129 páginas.
-6. Si la notación no aparece en la tabla local (ej. 863.9282), el código se guarda sin inventar una clasificación.
-7. Para expandir el catálogo luego de una revisión humana, editar cdd_bnm.csv antes de la primera ejecución con la base; para bases ya inicializadas, importar las nuevas entradas a la tabla cdd_bnm de SQLite (no modificar datos existentes sin respaldo).
-8. Esta versión no incorpora la búsqueda por CDD ni el PDF exportado con CDD todavía.
-9. Verificar que el BAT de compilación incluya cdd_bnm.csv como recurso; la especificación PyInstaller incluida lo contempla.
+Consultar README.md para las instrucciones actualizadas y el alcance.
+Esta rama amplía el catálogo de 11 a 124 entradas verificadas del manual BNM.
+La clasificación aparece al escribir; Catálogo BNM permite buscar y elegir.
+Los sectores R/RE/L/S/E/PL se interpretan junto con sus notaciones especiales.
+Se aceptan también 1-E, 2-E y 3-E; E es un alias para 3-E en la consulta.
+
+Los códigos sin coincidencia se guardan para revisión. Para CDD simple se
+puede mostrar la categoría general, identificada como tal. No se inventa una
+subclasificación. A863 se admite como código local pendiente de equivalencia.
+
+La base existente conserva sus libros, préstamos y notaciones. El catálogo
+se actualiza al iniciar. Respaldar biblioteca.db antes de actualizar el EXE.
+Ejecutar USAR_ESTE_generar_ejecutable.bat para incorporar estos cambios.
 Fuente: https://bnm.educacion.gob.ar/digital/documentos/EL006553.pdf
-
-
-CORRECCIÓN DEL ERROR [Errno 2] cdd_bnm.csv:
-- El BAT anterior compilaba directamente main.py sin incluir el archivo CSV.
-- Este BAT ahora compila BibliotecaEscolar.spec, que incluye cdd_bnm.csv.
-- Extraer TODOS los archivos del ZIP antes de ejecutar el BAT.
-- Copiar el nuevo dist\BibliotecaEscolar.exe a la carpeta del ejecutable usado.
-- Cerrar el programa y respaldar biblioteca.db antes de sustituir el EXE.
-- Conservar biblioteca.db existente junto al nuevo EXE, NO sobrescribirla.

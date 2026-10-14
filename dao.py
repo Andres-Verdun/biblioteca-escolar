@@ -10,6 +10,7 @@ protegiendo así el encapsulamiento del sistema.
 """
 
 from conexion import ConexionDB
+import cdd
 from modelos import Libro, Estudiante, Docente, Prestamo
 
 
@@ -40,7 +41,7 @@ class LibroDAO:
     }
     ORDEN_POR_DEFECTO = "Título (A-Z)"
 
-    def insertar(self, libro: Libro) -> int:
+    def insertar(self, libro: Libro, codigo_cdd=None) -> int:
         conexion = ConexionDB.conectar()
         try:
             cursor = conexion.cursor()
@@ -52,6 +53,8 @@ class LibroDAO:
             """, (libro.titulo, libro.autor, libro.editorial, libro.isbn or None,
                   libro.genero, libro.edad_recomendada or None, libro.ciclo,
                   libro.stock, libro.disponibles, libro.portada))
+            if codigo_cdd is not None:
+                cdd.guardar(cursor.lastrowid, codigo_cdd, conexion=conexion)
             conexion.commit()
             return cursor.lastrowid
         finally:
@@ -78,7 +81,7 @@ class LibroDAO:
         finally:
             ConexionDB.cerrar(conexion)
 
-    def actualizar(self, libro: Libro):
+    def actualizar(self, libro: Libro, codigo_cdd=None):
         if not libro.id_libro:
             raise ValueError("No se puede actualizar un libro sin id.")
         conexion = ConexionDB.conectar()
@@ -92,6 +95,8 @@ class LibroDAO:
             """, (libro.titulo, libro.autor, libro.editorial, libro.isbn or None,
                   libro.genero, libro.edad_recomendada or None, libro.ciclo,
                   libro.stock, libro.disponibles, libro.portada, libro.id_libro))
+            if codigo_cdd is not None:
+                cdd.guardar(libro.id_libro, codigo_cdd, conexion=conexion)
             conexion.commit()
         finally:
             ConexionDB.cerrar(conexion)

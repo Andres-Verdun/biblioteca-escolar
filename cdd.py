@@ -1,55 +1,166 @@
-"""CDD local. Clasificaciones verificadas en manual BNM; no interpreta códigos desconocidos."""
+"""Consulta local de notaciones BNM, separando CDD y sectores basados en CDU."""
 import csv
 import os
-import sys
 import re
+import sys
+from dataclasses import dataclass
 from conexion import ConexionDB
 
 FUENTE = "Manual de notaciones de CDD - BNM, https://bnm.educacion.gob.ar/digital/documentos/EL006553.pdf"
+SECTORES = {
+    "R": "Referencia", "RE": "Referencia: enciclopedias",
+    "L": "Códigos de legislación", "S": "Enseñanza secundaria",
+    "E": "EGB, tercer ciclo", "1-E": "EGB, primer ciclo",
+    "2-E": "EGB, segundo ciclo", "3-E": "EGB, tercer ciclo",
+    "PL": "Polimodal",
+}
+# También se conservan prefijos locales anteriores (p. ej. A863), sin
+# atribuirles una equivalencia BNM que no esté documentada en el catálogo.
+PATRON = re.compile(
+    r"(?:(?P<prefijo>[123]-E|[A-Z]{1,3})\s*)?"
+    r"(?P<numero>\d{1,3}(?:\.\d+)*(?:[/\-]\d+(?:\.\d+)*)*"
+    r"(?:\[\d+(?:\.\d+)*\]|\(\d+(?:\.\d+)*\))?)"
+)
+
 
 def _ruta_recurso(nombre):
     if getattr(sys, "frozen", False):
         return os.path.join(getattr(sys, "_MEIPASS", os.path.dirname(sys.executable)), nombre)
     return os.path.join(os.path.dirname(__file__), nombre)
 
-def inicializar():
-    con = ConexionDB.conectar()
-    try:
-        con.execute("CREATE TABLE IF NOT EXISTS cdd_bnm (codigo TEXT PRIMARY KEY, descripcion TEXT NOT NULL, pagina TEXT, fuente TEXT NOT NULL)")
-        con.execute("CREATE TABLE IF NOT EXISTS libro_cdd (id_libro INTEGER PRIMARY KEY REFERENCES libros(id_libro) ON DELETE CASCADE, codigo TEXT NOT NULL)")
-        with open(_ruta_recurso('cdd_bnm.csv'), encoding='utf-8-sig',newline='') as f:
-            for fila in csv.DictReader(f):
-                codigo=fila['codigo'].strip(); desc=fila['descripcion'].strip()
-                if codigo and desc:
-                    con.execute('INSERT OR IGNORE INTO cdd_bnm (codigo,descripcion,pagina,fuente) VALUES (?,?,?,?)',(codigo,desc,fila.get('pagina',''),FUENTE))
-        con.commit()
-    finally: ConexionDB.cerrar(con)
+
+def normalizar(codigo):
+    """Normaliza mayúsculas/espacios, conservando ceros y signos de la notación."""
+    texto = re.sub(r"\s+", "", codigo.strip().upper())
+    if not texto:
+        return ""
+    encontrado = PATRON.fullmatch(texto)
+    if not encontrado:
+        raise ValueError("Notación inválida. Ejemplos: 370, RE 030, R 806.0-3, 3-E 372.4.")
+    prefijo, numero = encontrado.group("prefijo", "numero")
+    return f"{prefijo} {numero}" if prefijo else numero
+
 
 def codigo_valido(codigo):
-    return not codigo or bool(re.fullmatch(r"(?:[A-Za-z]{1,3}\s*)?\d{1,3}(?:\.\d+)?",codigo.strip()))
+    try:
+        normalizar(codigo)
+        return True
+    except ValueError:
+        return False
+
+
+def inicializar():
+    """Agrega/actualiza el catálogo oficial sin alterar las notaciones de los libros."""
+    # Leer y validar antes de abrir la transacción: un CSV dañado no debe
+    # dejar una importación parcial. Las páginas son las del PDF, desde 1.
+    with open(_ruta_recurso("cdd_bnm.csv"), encoding="utf-8-sig", newline="") as archivo:
+        filas = [(normalizar(f["codigo"]), f["descripcion"].strip(), f.get("pagina", ""))
+                 for f in csv.DictReader(archivo)]
+    if any(not codigo or not descripcion for codigo, descripcion, _ in filas):
+        raise ValueError("El catálogo CDD contiene una entrada vacía.")
+    con = ConexionDB.conectar()
+    try:
+        with con:
+            con.execute("CREATE TABLE IF NOT EXISTS cdd_bnm (codigo TEXT PRIMARY KEY, descripcion TEXT NOT NULL, pagina TEXT, fuente TEXT NOT NULL)")
+            con.execute("CREATE TABLE IF NOT EXISTS libro_cdd (id_libro INTEGER PRIMARY KEY REFERENCES libros(id_libro) ON DELETE CASCADE, codigo TEXT NOT NULL)")
+            con.executemany("""INSERT INTO cdd_bnm (codigo,descripcion,pagina,fuente)
+                VALUES (?,?,?,?) ON CONFLICT(codigo) DO UPDATE SET
+                descripcion=excluded.descripcion,pagina=excluded.pagina,fuente=excluded.fuente""",
+                [(codigo, descripcion, pagina, FUENTE) for codigo, descripcion, pagina in filas])
+    finally:
+        ConexionDB.cerrar(con)
+
 
 def consultar(codigo):
-    codigo=codigo.strip()
-    if not codigo: return None
-    con=ConexionDB.conectar()
+    """Coincidencia exacta; E se admite como alias del tercer ciclo 3-E."""
+    codigo = normalizar(codigo)
+    if not codigo:
+        return None
+    if codigo.startswith("E "):
+        codigo = "3-" + codigo
+    con = ConexionDB.conectar()
     try:
-        fila=con.execute('SELECT descripcion,pagina FROM cdd_bnm WHERE codigo=?',(codigo,)).fetchone()
-        return (fila['descripcion'],fila['pagina']) if fila else None
-    finally: ConexionDB.cerrar(con)
+        fila = con.execute("SELECT descripcion,pagina FROM cdd_bnm WHERE codigo=?", (codigo,)).fetchone()
+        return (fila["descripcion"], fila["pagina"]) if fila else None
+    finally:
+        ConexionDB.cerrar(con)
 
-def guardar(id_libro,codigo):
-    codigo=codigo.strip()
-    if not codigo_valido(codigo): raise ValueError('Formato de código CDD inválido.')
-    con=ConexionDB.conectar()
+
+@dataclass(frozen=True)
+class Clasificacion:
+    codigo: str
+    sector: str
+    descripcion: str
+    estado: str  # exacta, general, pendiente, vacia
+    pagina: str = ""
+    codigo_base: str = ""
+
+    def texto(self):
+        if self.estado == "vacia":
+            return "Ingrese una notación o elija una del catálogo BNM."
+        sector = f"{self.sector}. " if self.sector else ""
+        if self.estado == "exacta":
+            return f"{sector}{self.descripcion} — BNM, pág. {self.pagina} del PDF."
+        if self.estado == "general":
+            return (f"Categoría general: {self.descripcion} ({self.codigo_base}). "
+                    "La subclasificación exacta requiere revisión.")
+        return f"{sector}Sin equivalencia exacta verificada; se guardará la notación para revisión."
+
+
+def clasificar(codigo):
+    codigo = normalizar(codigo)
+    if not codigo:
+        return Clasificacion("", "", "", "vacia")
+    encontrado = PATRON.fullmatch(codigo)
+    prefijo = encontrado.group("prefijo") or ""
+    sector = SECTORES.get(prefijo, "Prefijo local sin equivalencia BNM" if prefijo else "")
+    exacta = consultar(codigo)
+    if exacta:
+        return Clasificacion(codigo, sector, exacta[0], "exacta", exacta[1])
+    # Los sectores especiales usan CDU: R 800 NO es Literatura CDD.
+    # Sólo números CDD simples de tres cifras permiten categoría general.
+    numero = encontrado.group("numero")
+    if not prefijo and re.fullmatch(r"\d{3}(?:\.\d+)?", numero):
+        base = numero[0] + "00"
+        general = consultar(base)
+        if general:
+            return Clasificacion(codigo, "", general[0], "general", general[1], base)
+    return Clasificacion(codigo, sector, "", "pendiente")
+
+
+def catalogo(texto=""):
+    """Lista de códigos y descripciones para el selector de la bibliotecaria."""
+    con = ConexionDB.conectar()
     try:
-        if codigo: con.execute('INSERT INTO libro_cdd(id_libro,codigo) VALUES (?,?) ON CONFLICT(id_libro) DO UPDATE SET codigo=excluded.codigo',(id_libro,codigo))
-        else: con.execute('DELETE FROM libro_cdd WHERE id_libro=?',(id_libro,))
-        con.commit()
-    finally: ConexionDB.cerrar(con)
+        filas = con.execute("SELECT codigo,descripcion,pagina FROM cdd_bnm ORDER BY codigo").fetchall()
+        texto = texto.casefold().strip()
+        return [tuple(f) for f in filas if not texto or texto in f["codigo"].casefold()
+                or texto in f["descripcion"].casefold()]
+    finally:
+        ConexionDB.cerrar(con)
+
+
+def guardar(id_libro, codigo, conexion=None):
+    codigo = normalizar(codigo)
+    propia = conexion is None
+    con = ConexionDB.conectar() if propia else conexion
+    try:
+        if codigo:
+            con.execute("""INSERT INTO libro_cdd(id_libro,codigo) VALUES (?,?)
+                ON CONFLICT(id_libro) DO UPDATE SET codigo=excluded.codigo""", (id_libro, codigo))
+        else:
+            con.execute("DELETE FROM libro_cdd WHERE id_libro=?", (id_libro,))
+        if propia:
+            con.commit()
+    finally:
+        if propia:
+            ConexionDB.cerrar(con)
+
 
 def obtener(id_libro):
-    con=ConexionDB.conectar()
+    con = ConexionDB.conectar()
     try:
-        fila=con.execute('SELECT codigo FROM libro_cdd WHERE id_libro=?',(id_libro,)).fetchone()
-        return fila['codigo'] if fila else ''
-    finally: ConexionDB.cerrar(con)
+        fila = con.execute("SELECT codigo FROM libro_cdd WHERE id_libro=?", (id_libro,)).fetchone()
+        return fila["codigo"] if fila else ""
+    finally:
+        ConexionDB.cerrar(con)
