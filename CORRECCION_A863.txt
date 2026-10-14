@@ -1,3 +1,8 @@
-Se corrigió la validación para aceptar prefijos de letras unidos al número, como A863, sin obligar a insertar un espacio. El dato se guarda tal como se ingresa. La descripción automática solo aparecerá si el código exacto está en cdd_bnm.csv.
-GENERACIÓN: ejecutar USAR_ESTE_generar_ejecutable.bat después de extraer el ZIP.
-ANTES: respaldar biblioteca.db y reemplazar solo el archivo EXE anterior.
+A863 y A 863 se reconocen como Narrativa argentina.
+La equivalencia está documentada por la Biblioteca Nacional en la ficha de
+Tres historias pringlenses, de César Aira (2013):
+https://www.bn.gov.ar/micrositios/admin_assets/issues/files/6f9d6d4cfb07f8e0c88e0439898ee960.pdf
+
+No se elimina el prefijo A ni se atribuye esta equivalencia al manual BNM.
+Las notaciones históricas no se reescriben al iniciar la aplicación.
+Consultar README.md para el alcance de la rama Notaciones-CDD.
