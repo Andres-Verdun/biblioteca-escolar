@@ -105,9 +105,8 @@ class Libro:
 
     @genero.setter
     def genero(self, valor):
-        if not valor:
-            raise ValueError("Debe seleccionar un género para el libro.")
-        self._genero = valor
+        # Campo opcional: se almacena vacío sin exigir una categoría.
+        self._genero = str(valor).strip() if valor is not None else ""
 
     @property
     def edad_recomendada(self):

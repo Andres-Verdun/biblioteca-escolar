@@ -269,8 +269,8 @@ class AplicacionBiblioteca(tk.Tk):
             ttk.Label(panel_form, text=texto).grid(row=0, column=i * 2, sticky="w", padx=4, pady=4)
             ttk.Entry(panel_form, textvariable=var, width=17).grid(row=0, column=i * 2 + 1, padx=4, pady=4)
 
-        ttk.Label(panel_form, text="Género*").grid(row=1, column=0, sticky="w", padx=4, pady=4)
-        ttk.Combobox(panel_form, textvariable=self.var_libro_genero, values=GENEROS,
+        ttk.Label(panel_form, text="Género").grid(row=1, column=0, sticky="w", padx=4, pady=4)
+        ttk.Combobox(panel_form, textvariable=self.var_libro_genero, values=[""] + GENEROS,
                      state="readonly", width=18).grid(row=1, column=1, padx=4, pady=4)
 
         ttk.Label(panel_form, text="Edad recomendada").grid(row=1, column=2, sticky="w", padx=4, pady=4)

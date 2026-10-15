@@ -157,3 +157,11 @@ como S 860[82]-1 (poesía argentina), S 860[82]-2 (teatro argentino),
 S 860[82]-3 (narrativa argentina) y S 860[7/8] (literatura latinoamericana).
 Las letras y auxiliares se conservan al guardar y no se eliminan para
 atribuir una clasificación numérica diferente.
+
+## Género opcional
+
+El campo **Género** puede quedar vacío al agregar o modificar un libro.
+La primera opción vacía del desplegable permite quitar un género asignado.
+Se conserva la compatibilidad con las bases existentes: el valor sin género
+se guarda como texto vacío, sin reconstruir tablas ni modificar otros datos.
+Los libros sin género se incluyen al buscar con el filtro **Todos**.
