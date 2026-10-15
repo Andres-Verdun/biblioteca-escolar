@@ -43,8 +43,8 @@ R es referencia; RE, enciclopedias; L, legislación; S, secundaria; EGB se
 identifica por ciclo (1-E/2-E/3-E); PL, Polimodal. Son denominaciones del manual
 histórico, independientes del campo Ciclo del formulario.
 
-`cdd_bnm.csv` contiene **190 entradas seleccionadas**: 175 del manual BNM y
-15 equivalencias de fichas editoriales y catálogos bibliotecarios. La columna
+`cdd_bnm.csv` contiene **275 entradas seleccionadas**: 218 del manual BNM y
+57 de sumarios OCLC, fichas editoriales y catálogos bibliotecarios. La columna
 `fuente` conserva la referencia de cada equivalencia; cuando está vacía se
 utiliza el manual BNM. Las páginas del manual se cuentan desde 1 del PDF.
 Las fuentes y páginas se conservan como documentación interna y no aparecen
@@ -91,8 +91,8 @@ una copia de `biblioteca.db`. Conservar esa base junto al nuevo ejecutable.
 
 ## Equivalencias complementarias
 
-Los rótulos de las quince entradas complementarias son descripciones prácticas
-basadas en los usos de las fichas citadas en el CSV. No son una transcripción
+Los rótulos de las entradas complementarias son descripciones prácticas
+basadas en los sumarios y fichas citados en el CSV. No son una transcripción
 de encabezamientos oficiales de una edición completa de CDD, ni equivalencias
 atribuidas al manual BNM. No determinan por sí solos la edad recomendada.
 
@@ -128,3 +128,32 @@ prefijos de letras se interpretan sólo si están documentados en el catálogo.
 Las pruebas de interfaz se ejecutan cuando hay pantalla disponible (DISPLAY
 en Linux/Xvfb o una sesión Windows). Comprueban el menú de columnas, Tercer
 Ciclo, selección de libros y PDFs con ID oculto y portadas.
+
+## Ampliación de Literatura (800)
+
+Se incorporaron 85 notaciones: el catálogo ahora incluye 90 códigos numéricos
+dentro de 800–899, además de sus entradas literarias con prefijos.
+La ampliación aparece automáticamente en el selector, el formulario, los
+listados y los PDF al actualizar y volver a abrir el programa. No hay que
+volver a cargar los libros existentes.
+
+Se amplían las formas literarias (poesía, teatro, narrativa, ensayo, cartas,
+humor y antologías), las literaturas por país/lengua y las colecciones
+infantiles. Ejemplos: 808.0681 (poesía infantil), 808.0682 (teatro infantil),
+813 (narrativa estadounidense en inglés), 843 (narrativa francesa),
+864.9932 (ensayos argentinos), 869.8992 (literatura brasileña).
+Los códigos de literatura por lengua no indican necesariamente el idioma
+de la traducción que se tiene en la biblioteca.
+
+Las 36 entradas procedentes de los sumarios públicos OCLC son rótulos
+resumidos en español del documento DDC 22 (2003), página 19 del PDF:
+https://www.oclc.org/content/dam/oclc/dewey/resources/summaries/deweysummaries.pdf
+No sustituyen las adaptaciones del manual BNM ya incorporadas; por ejemplo,
+804 conserva Colecciones de cuentos y 868 conserva Antologías de literatura
+española según BNM. No es una tabla completa de una única edición de CDD.
+
+También se reconocen las notaciones escolares del manual con auxiliares,
+como S 860[82]-1 (poesía argentina), S 860[82]-2 (teatro argentino),
+S 860[82]-3 (narrativa argentina) y S 860[7/8] (literatura latinoamericana).
+Las letras y auxiliares se conservan al guardar y no se eliminan para
+atribuir una clasificación numérica diferente.

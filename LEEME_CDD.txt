@@ -1,7 +1,7 @@
 Biblioteca Escolar 360 — Notaciones-CDD
 
 Consultar README.md para las instrucciones y el alcance.
-El catálogo contiene 190 entradas: 175 del manual BNM y 15 complementarias.
+El catálogo contiene 275 entradas: 218 del manual BNM y 57 complementarias.
 Se agregaron 635.9, 372.7, A863, 863.9282, 861.9282, 862.9282, 808.068 y 808.0683.
 El resultado muestra sólo la clasificación; las fuentes quedan documentadas
 en el CSV y la base de datos. Catálogo CDD permite buscar y elegir.
@@ -19,3 +19,9 @@ CDD y Clasificación aparecen en Libros y Búsqueda avanzada.
 Columnas visibles permite ocultar/restaurar columnas en cada tabla.
 El PDF respeta las columnas visibles, incluso si se oculta el ID.
 Se agregó Tercer Ciclo al formulario y a los filtros.
+
+Literatura: se agregaron 85 notaciones y ahora hay 90 códigos numéricos
+en el área 800–899, además de variantes con letras. Se amplían poesía,
+teatro, narrativa, ensayo, cartas, humor, antologías y literatura por países.
+Se admiten auxiliares escolares como S 860[82]-1 y S 860[7/8].
+Las fuentes se registran individualmente. Consultar README.md para el alcance.

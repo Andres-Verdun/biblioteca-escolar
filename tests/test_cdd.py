@@ -143,7 +143,7 @@ class NotacionesCDDTest(unittest.TestCase):
         codigos = [cdd.normalizar(f['codigo']) for f in filas]
         self.assertEqual(len(codigos), len(set(codigos)))
         self.assertEqual(len(cdd.catalogo()), len(filas))
-        self.assertEqual({fila[0] for fila in cdd.catalogo('NARRATIVA ARGENTINA')}, {'863.9932', 'A 863'})
+        self.assertTrue({'863.9932', 'A 863'}.issubset({fila[0] for fila in cdd.catalogo('NARRATIVA ARGENTINA')}))
         self.assertEqual(cdd.catalogo('sin resultados improbables'), [])
 
 
