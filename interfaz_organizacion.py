@@ -11,6 +11,8 @@ class InterfazOrganizacion:
         self.var_libro_ubicacion = tk.StringVar()
         self.var_libro_etiqueta = tk.StringVar()
         self._franjas_antologia = []
+        self._etiqueta_manual = False
+        self._asignando_etiqueta = False
         self._claves_por_etiqueta = {org.nombre_etiqueta(k):k for k in org.ETIQUETAS}
         ttk.Label(panel,text='Ubicación').grid(row=3,column=0,sticky='w',padx=4,pady=4)
         self.combo_libro_ubicacion = ttk.Combobox(panel,textvariable=self.var_libro_ubicacion,state='readonly',width=18)
@@ -24,7 +26,35 @@ class InterfazOrganizacion:
         self.boton_franjas.grid(row=4,column=4,columnspan=2,padx=4)
         self.vista_etiqueta = tk.Canvas(panel,width=120,height=24,highlightthickness=1,highlightbackground='#aaaaaa')
         self.vista_etiqueta.grid(row=4,column=6,columnspan=2,padx=4)
-        self.var_libro_etiqueta.trace_add('write',lambda *_:self._actualizar_vista_etiqueta())
+        self.var_libro_etiqueta.trace_add('write',self._cambio_etiqueta)
+        self.var_origen_etiqueta = tk.StringVar()
+        ttk.Label(panel,textvariable=self.var_origen_etiqueta).grid(row=5,column=0,columnspan=6,sticky='w',padx=4)
+        ttk.Button(panel,text='Usar etiqueta del CDD',command=self._usar_etiqueta_cdd).grid(row=5,column=6,columnspan=2,padx=4,pady=4)
+        self.var_libro_cdd.trace_add('write',lambda *_:self._sugerir_etiqueta_cdd())
+
+    def _cambio_etiqueta(self, *_):
+        if not self._asignando_etiqueta:
+            self._etiqueta_manual = True
+            self.var_origen_etiqueta.set('Elección manual: se conserva aunque cambie el CDD.')
+        self._actualizar_vista_etiqueta()
+
+    def _usar_etiqueta_cdd(self):
+        self._etiqueta_manual = False
+        self._sugerir_etiqueta_cdd()
+
+    def _sugerir_etiqueta_cdd(self):
+        if self._etiqueta_manual:
+            return
+        clave = org.sugerir_etiqueta(self.var_libro_cdd.get())
+        self._asignando_etiqueta = True
+        try:
+            self._franjas_antologia = []
+            self.var_libro_etiqueta.set(org.nombre_etiqueta(clave))
+        finally:
+            self._asignando_etiqueta = False
+        self.var_origen_etiqueta.set(
+            'Propuesta del CDD: puede cambiarla (narrativa propone Novela).'
+            if clave else 'Sin propuesta de color para este CDD: seleccione una etiqueta si corresponde.')
 
     def _actualizar_vista_etiqueta(self):
         clave = self._claves_por_etiqueta.get(self.var_libro_etiqueta.get(),'')
@@ -73,6 +103,7 @@ class InterfazOrganizacion:
         self.var_libro_ubicacion.set('')
         self._franjas_antologia=[]
         self.var_libro_etiqueta.set('')
+        self._usar_etiqueta_cdd()
 
     def _construir_tab_ubicaciones(self):
         panel=self.tab_ubicaciones

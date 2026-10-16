@@ -27,6 +27,17 @@ class OrganizacionTest(unittest.TestCase):
         ConexionDB._ruta_base_datos=self.original
         self.tmp.cleanup()
 
+    def test_propuestas_cdd_respetan_catalogo_y_ambiguedades(self):
+        for codigo,esperado in {
+            '861.9282':'poesia', 'A861':'poesia', '862.9282':'teatro',
+            'S860[82]-1':'poesia', 'S860-3':'novela', '804':'cuento',
+            '863.9282':'novela', 'A863':'novela', '823.12345':'novela',
+            '370':'', '372.7':'', '800':'', '808.83':'', '808.88':'',
+            'R 82':'', 'A863.09':'', '863.09':'', 'ZZ861':'', 'inválido':'', '':''
+        }.items():
+            with self.subTest(codigo=codigo):
+                self.assertEqual(org.sugerir_etiqueta(codigo),esperado)
+
     def test_migracion_idempotente_y_portabilidad(self):
         org.inicializar()
         org.inicializar()

@@ -1,6 +1,7 @@
 """Ubicaciones reutilizables y clasificación por colores asignada por la bibliotecaria."""
 import json
 import unicodedata
+import cdd
 from conexion import ConexionDB
 
 # Rótulos según Clasificación por colores, docentes bibliotecarias de Neuquén,
@@ -35,6 +36,42 @@ def nombre_etiqueta(clave):
         return ''
     nombre, color, letra = ETIQUETAS[clave]
     return nombre + (f" - {COLORES[color][0]}" if color else ' - Franjas de colores') + (f" {letra}" if letra else '')
+
+
+def sugerir_etiqueta(codigo):
+    """Propuesta cromática desde el catálogo local; narrativa propone novela.
+
+    Referencia, crítica y códigos ambiguos no identifican una obra literaria.
+    No se deducen terror, policial, región ni colores de antología del número.
+    """
+    try:
+        resultado = cdd.clasificar(codigo)
+    except ValueError:
+        return ''
+    if resultado.estado not in ('exacta', 'general'):
+        return ''
+    if resultado.estado == 'general' and '.0' in resultado.codigo:
+        return ''
+    if resultado.sector.startswith('Referencia'):
+        return ''
+    texto = resultado.descripcion.casefold()
+    if any(p in texto for p in ('crítica', 'historia', 'diccionario', 'enciclopedia',
+                                'enseñanza', 'teoría', 'técnica')):
+        return ''
+    if 'poesía' in texto:
+        return 'poesia'
+    if 'teatro' in texto or 'títeres' in texto:
+        return 'teatro'
+    if 'cuento' in texto:
+        return 'cuento'
+    if 'historieta' in texto or 'novela gráfica' in texto or 'manga' in texto:
+        return 'historieta'
+    # Las colecciones mixtas (808.83) requieren selección manual.
+    if any(p in texto for p in ('leyenda', 'fábula', 'mito')):
+        return '' if 'novela' in texto else 'mitos'
+    if 'narrativa' in texto or 'novela' in texto:
+        return 'novela'
+    return ''
 
 
 def paleta(clave, franjas=()):

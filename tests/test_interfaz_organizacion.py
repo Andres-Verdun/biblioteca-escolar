@@ -58,6 +58,40 @@ class InterfazOrganizacionTest(unittest.TestCase):
         self.assertEqual(a.var_libro_ubicacion.get(),'Estante azul')
         self.assertEqual(a.var_libro_etiqueta.get(),org.nombre_etiqueta('novela_policial'))
 
+    def test_cdd_asigna_etiqueta_y_respeta_correccion_manual(self):
+        a=self.app
+        a._limpiar_form_libro()
+        a.var_libro_cdd.set('861.9282')
+        self.assertEqual(a.var_libro_etiqueta.get(),org.nombre_etiqueta('poesia'))
+        a.var_libro_cdd.set('862.9282')
+        self.assertEqual(a.var_libro_etiqueta.get(),org.nombre_etiqueta('teatro'))
+        a.var_libro_etiqueta.set(org.nombre_etiqueta('cuento_terror'))
+        a.var_libro_cdd.set('863.9282')
+        self.assertEqual(a.var_libro_etiqueta.get(),org.nombre_etiqueta('cuento_terror'))
+        a._usar_etiqueta_cdd()
+        self.assertEqual(a.var_libro_etiqueta.get(),org.nombre_etiqueta('novela'))
+        a.var_libro_cdd.set('370')
+        self.assertEqual(a.var_libro_etiqueta.get(),'')
+        a.var_libro_cdd.set('861')
+        a.var_libro_cdd.set('notación inválida')
+        self.assertEqual(a.var_libro_etiqueta.get(),'')
+
+    def test_etiqueta_guardada_no_se_reemplaza_y_automatica_se_guarda(self):
+        a=self.app
+        a.tabla_libros.selection_set(a.tabla_libros.get_children()[0])
+        a._seleccionar_libro(None)
+        self.assertEqual(a.var_libro_etiqueta.get(),'')
+        a._usar_etiqueta_cdd()
+        self.assertEqual(a.var_libro_etiqueta.get(),org.nombre_etiqueta('novela'))
+        a.es_administrador=True
+        with patch('gui.messagebox.showinfo'):
+            a._modificar_libro()
+        self.assertEqual(org.obtener(self.id)['etiqueta'],'novela')
+        a.tabla_libros.selection_set(a.tabla_libros.get_children()[0])
+        a._seleccionar_libro(None)
+        a.var_libro_cdd.set('861')
+        self.assertEqual(a.var_libro_etiqueta.get(),org.nombre_etiqueta('novela'))
+
     def test_renombrar_y_colores_antologia(self):
         a=self.app
         uid=org.crear_ubicacion('Sala')

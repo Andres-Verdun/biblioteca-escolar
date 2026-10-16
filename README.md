@@ -187,8 +187,16 @@ en ese registro comparten ese dato.
 
 ### Clasificación por colores de Neuquén
 
-La clasificación cromática se elige manualmente y es independiente del CDD,
-del género y de la ubicación. No se asigna automáticamente desde el código.
+Al introducir un CDD, el catálogo propone una etiqueta de color para poesía,
+teatro, cuentos y narrativa (para esta última propone Novela). La bibliotecaria
+puede cambiarla o dejarla vacía; su elección se conserva al editar el CDD y al
+volver a abrir el libro. «Usar etiqueta del CDD» reactiva la propuesta automática.
+Las etiquetas guardadas se respetan, incluso una selección vacía. Para aplicar
+la propuesta a un libro existente, pulse «Usar etiqueta del CDD» y Modificar.
+No se modifican en bloque. Si el código es desconocido, de referencia, crítica o no identifica
+una categoría cromática, se deja la selección manual. Las colecciones mixtas,
+los colores de antología, policial, terror y región requieren decisión manual.
+El género y la ubicación siguen siendo independientes.
 La referencia es el documento aportado por el usuario,
 CLASIFICACION-COLORES-Bibliotecas-Neuquen-.docx-1.pdf, páginas 3, 5 y 6,
 elaborado por docentes bibliotecarias de escuelas de Neuquén (2023).
