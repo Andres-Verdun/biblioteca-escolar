@@ -1,6 +1,7 @@
 import csv
 import tempfile
 import unittest
+from contextlib import closing
 from pathlib import Path
 
 import cdd
@@ -103,7 +104,7 @@ class NotacionesCDDTest(unittest.TestCase):
     def test_actualizacion_de_catalogo_preserva_datos_previos(self):
         id_libro = LibroDAO().insertar(self.libro())
         # Simula notación guardada con la versión anterior, sin normalización.
-        with ConexionDB.conectar() as con:
+        with closing(ConexionDB.conectar()) as con, con:
             con.execute('INSERT INTO libro_cdd VALUES (?,?)', (id_libro, 'A863'))
             con.execute("UPDATE cdd_bnm SET descripcion='Descripción vieja' WHERE codigo='RE 030'")
         cdd.inicializar()
