@@ -108,7 +108,7 @@ class OrganizacionTest(unittest.TestCase):
 
     def test_pdf_medidas_cantidad_y_salto_de_pagina(self):
         ruta=str(Path(self.tmp.name)/'etiquetas.pdf')
-        item=dict(titulo='Novela de prueba',codigo='A863',ubicacion='Estante azul',etiqueta='novela_policial',franjas=[])
+        item=dict(titulo='Novela de prueba',codigo='A863',ubicacion='B1-E1',etiqueta='novela_policial',franjas=[])
         generar(ruta,[item]*(POR_PAGINA+1))
         with fitz.open(ruta) as pdf:
             self.assertEqual(len(pdf),2)
@@ -123,7 +123,12 @@ class OrganizacionTest(unittest.TestCase):
                     self.assertLess(rect.x1,pagina.rect.width)
                     self.assertLess(rect.y1,pagina.rect.height-15)
                 self.assertIn('CDD: A863',pagina.get_text())
-                self.assertIn('Estante azul',pagina.get_text())
+                self.assertIn('B1-E1',pagina.get_text())
+                for palabra in pagina.get_text('words'):
+                    if palabra[4]=='B1-E1':
+                        r=next(r for r in rectangulos if r.contains(fitz.Rect(palabra[:4])))
+                        self.assertLessEqual(palabra[2],r.x0+8*72/25.4)
+                        self.assertGreater(palabra[1],r.y0+ALTO/2)
             self.assertEqual(total,POR_PAGINA+1)
 
     def test_pdf_antologia_textos_largos_y_datos_vacios(self):

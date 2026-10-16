@@ -270,11 +270,17 @@ class InterfazOrganizacion:
         formulario.pack(fill='x',padx=12)
         tipo=tk.StringVar(value=org.nombre_etiqueta('cuento'))
         cantidad=tk.StringVar(value='1')
+        ubicacion=tk.StringVar(value='')
         ttk.Label(formulario,text='Etiqueta').grid(row=0,column=0,sticky='w')
         ttk.Combobox(formulario,textvariable=tipo,values=list(self._claves_por_etiqueta),
             state='readonly',width=48).grid(row=0,column=1,padx=6,pady=6)
         ttk.Label(formulario,text='Cantidad').grid(row=0,column=2)
         ttk.Spinbox(formulario,from_=1,to=1000,textvariable=cantidad,width=6).grid(row=0,column=3,padx=6)
+        lugares={u['nombre']:u['id_ubicacion'] for u in org.listar_ubicaciones()}
+        ttk.Label(formulario,text='Ubicación (opcional)').grid(row=1,column=0,sticky='w')
+        ttk.Combobox(formulario,textvariable=ubicacion,values=['']+list(lugares),state='readonly',
+            width=48).grid(row=1,column=1,padx=6,pady=6)
+        ttk.Label(formulario,text='Se imprime al pie de la banda de color.').grid(row=2,column=0,columnspan=4,sticky='w',pady=4)
         franjas=ttk.LabelFrame(panel,text='Colores para antologías (elegí al menos uno)')
         variables={k:tk.BooleanVar(value=False) for k in org.COLORES}
         for n,(clave,(nombre,color)) in enumerate(org.COLORES.items()):
@@ -285,7 +291,7 @@ class InterfazOrganizacion:
         tipo.trace_add('write',mostrar_franjas)
         marco=ttk.Frame(panel)
         cola=ttk.Treeview(marco,columns=('tipo','cantidad'),show='headings',height=8)
-        cola.heading('tipo',text='Etiqueta y colores')
+        cola.heading('tipo',text='Etiqueta, colores y ubicación')
         cola.heading('cantidad',text='Cantidad')
         cola.column('tipo',width=570)
         cola.column('cantidad',width=90,stretch=False)
@@ -295,15 +301,16 @@ class InterfazOrganizacion:
                 n=int(cantidad.get())
                 clave=self._claves_por_etiqueta[tipo.get()]
                 colores=[k for k,v in variables.items() if v.get()]
-                datos=org.validar(etiqueta=clave,franjas=colores)
+                datos=org.validar(id_ubicacion=lugares.get(ubicacion.get()),etiqueta=clave,franjas=colores)
                 if not 1<=n<=1000:raise ValueError('Indique entre 1 y 1000 etiquetas por tipo.')
             except (ValueError,KeyError) as error:
                 messagebox.showwarning('Etiquetas',str(error),parent=ventana)
                 return
             nombre=tipo.get()
             if clave=='antologia':nombre+=': '+', '.join(org.COLORES[k][0] for k in datos['franjas'])
+            if ubicacion.get():nombre+=' | '+ubicacion.get()
             iid=cola.insert('','end',values=(nombre,n))
-            pedidos[iid]=dict(etiqueta=clave,franjas=datos['franjas'],cantidad=n)
+            pedidos[iid]=dict(etiqueta=clave,franjas=datos['franjas'],cantidad=n,id_ubicacion=datos['id_ubicacion'])
         def quitar():
             for iid in cola.selection():
                 cola.delete(iid)
@@ -334,14 +341,16 @@ class InterfazOrganizacion:
 
     def _generar_etiquetas_libres(self,ruta,pedidos):
         etiquetas=[]
+        lugares={u['id_ubicacion']:u['nombre'] for u in org.listar_ubicaciones()}
         for pedido in pedidos:
             n=pedido.get('cantidad')
             if type(n) is not int or not 1<=n<=1000:
                 raise ValueError('Indique entre 1 y 1000 etiquetas por tipo.')
             if not pedido.get('etiqueta'):
                 raise ValueError('Seleccione un tipo de etiqueta.')
-            datos=org.validar(etiqueta=pedido['etiqueta'],franjas=pedido.get('franjas',[]))
-            etiquetas.extend([dict(etiqueta=datos['etiqueta'],franjas=datos['franjas'],libre=True)]*n)
+            datos=org.validar(id_ubicacion=pedido.get('id_ubicacion'),etiqueta=pedido['etiqueta'],franjas=pedido.get('franjas',[]))
+            etiquetas.extend([dict(etiqueta=datos['etiqueta'],franjas=datos['franjas'],
+                ubicacion=lugares.get(datos['id_ubicacion'],''),libre=True)]*n)
         generar(ruta,etiquetas)
 
     def _generar_etiquetas(self,ruta,pedido):

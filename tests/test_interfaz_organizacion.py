@@ -110,7 +110,7 @@ class InterfazOrganizacionTest(unittest.TestCase):
 
     def test_generar_etiquetas_y_reporte_con_id_oculto(self):
         a=self.app
-        uid=org.crear_ubicacion('Estante azul')
+        uid=org.crear_ubicacion('B1-E1')
         org.guardar(self.id,uid,'cuento_terror')
         a._refrescar_libros()
         a._ejecutar_busqueda(False)
@@ -118,7 +118,7 @@ class InterfazOrganizacionTest(unittest.TestCase):
         a._generar_etiquetas(ruta,{self.id:3})
         with fitz.open(ruta) as pdf:
             self.assertEqual(pdf[0].get_text().count('CDD: 863.9282'),3)
-            self.assertIn('Estante azul',pdf[0].get_text())
+            self.assertIn('B1-E1',pdf[0].get_text())
             self.assertIn('Cuento de terror',pdf[0].get_text())
         tabla=a.tabla_busqueda
         tabla.configure(displaycolumns=('titulo','ubicacion','etiqueta_color'))
@@ -129,7 +129,7 @@ class InterfazOrganizacionTest(unittest.TestCase):
         with fitz.open(ruta) as pdf:
             texto=pdf[0].get_text()
             self.assertIn('Ubicación',texto)
-            self.assertIn('Estante azul',texto)
+            self.assertIn('B1-E1',texto)
             self.assertIn('Cuento de terror',texto)
             self.assertNotIn('ISBN',texto)
 
@@ -156,6 +156,7 @@ class InterfazOrganizacionTest(unittest.TestCase):
 
     def test_imprimir_por_tipo_sin_seleccionar_libros(self):
         a=self.app
+        org.crear_ubicacion('B1-E1')
         a._imprimir_etiquetas(a.tabla_libros)
         ventana=next(w for w in a.winfo_children() if w.winfo_class()=='Toplevel')
         def descendientes(w):
@@ -165,7 +166,9 @@ class InterfazOrganizacionTest(unittest.TestCase):
         widgets=list(descendientes(ventana))
         modos=next(w for w in widgets if w.winfo_class()=='TNotebook')
         self.assertEqual(modos.tab(modos.select(),'text'),'Por tipo y cantidad')
-        combo=next(w for w in widgets if w.winfo_class()=='TCombobox')
+        combos=[w for w in widgets if w.winfo_class()=='TCombobox']
+        combo=combos[0]
+        combos[1].set('B1-E1')
         cantidad=next(w for w in widgets if w.winfo_class()=='TSpinbox')
         agregar=next(w for w in widgets if w.winfo_class()=='TButton' and w['text']=='Agregar a la lista')
         combo.set(org.nombre_etiqueta('cuento_terror'))
@@ -181,6 +184,7 @@ class InterfazOrganizacionTest(unittest.TestCase):
         with fitz.open(ruta) as pdf:
             texto=''.join(p.get_text() for p in pdf)
             self.assertEqual(len(pdf),2)
+            self.assertEqual(texto.count('B1-E1'),23)
             self.assertEqual(texto.count('Cuento de terror'),20)
             self.assertEqual(texto.count('Poesía y formas poéticas'),3)
             self.assertNotIn('CDD:',texto)

@@ -191,7 +191,12 @@ En **Imprimir etiquetas → Por tipo y cantidad** se pueden elegir etiquetas
 de cualquier tipo y sus cantidades (1 a 1000 por entrada), agregar varios tipos
 a una lista y generar un PDF sin seleccionar ni modificar libros. Para antologías
 se eligen sus colores. Estas etiquetas contienen la categoría y banda cromática,
-sin título, CDD ni ubicación. Conservan las medidas de 7 × 2 cm, con 22 por hoja A4.
+sin título ni CDD. Se puede elegir una ubicación del catálogo para cada entrada;
+se imprime al pie de la banda de color, debajo de P/T, como `B1-E1`.
+Las etiquetas de libros también muestran allí su ubicación guardada.
+Conviene usar nombres cortos para que entren en la banda: los nombres largos
+se reducen y, si es necesario, se recortan con puntos suspensivos sólo en el PDF.
+Conservan las medidas de 7 × 2 cm, con 22 por hoja A4.
 La pestaña **Libros seleccionados** conserva la impresión con datos del catálogo.
 
 Al introducir un CDD, el catálogo propone una etiqueta de color para poesía,

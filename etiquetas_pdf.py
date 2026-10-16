@@ -63,6 +63,15 @@ def generar(ruta, etiquetas):
             c.setFillColor(HexColor('#000000'))
             c.setFont('Helvetica-Bold',16)
             c.drawCentredString(x+banda/2,y+ALTO/2-5,letra)
+        ubicacion = ' '.join(str(item.get('ubicacion') or '').split())
+        if ubicacion:
+            c.setFillColor(HexColor('#000000'))
+            # El rótulo corto de ubicación queda al pie de la banda, como B1-E1.
+            ancho_ubicacion = banda-1*mm
+            tamano = 6
+            while tamano > 5 and stringWidth(ubicacion,'Helvetica-Bold',tamano) > ancho_ubicacion:
+                tamano -= .25
+            _texto(c,ubicacion,x+.5*mm,y+2*mm,ancho_ubicacion,'Helvetica-Bold',tamano)
         c.setStrokeColor(HexColor('#888888'))
         c.setLineWidth(.3)
         c.rect(x,y,ANCHO,ALTO,fill=0,stroke=1)
@@ -76,5 +85,6 @@ def generar(ruta, etiquetas):
         _texto(c,categoria,tx,y+ALTO-10,ancho,'Helvetica-Bold',7)
         _texto(c,item.get('titulo',''),tx,y+ALTO-22,ancho,'Helvetica',7.5)
         _texto(c,'CDD: '+(item.get('codigo') or '-'),tx,y+ALTO-34,ancho,'Helvetica-Bold',8)
-        _texto(c,'Ubic.: '+(item.get('ubicacion') or 'Sin ubicación'),tx,y+7,ancho,'Helvetica',7.5)
+        if not ubicacion:
+            _texto(c,'Sin ubicación',tx,y+7,ancho,'Helvetica',7.5)
     c.save()
