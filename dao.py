@@ -11,6 +11,7 @@ protegiendo así el encapsulamiento del sistema.
 
 from conexion import ConexionDB
 import cdd
+import organizacion as org
 from modelos import Libro, Estudiante, Docente, Prestamo
 
 
@@ -41,7 +42,7 @@ class LibroDAO:
     }
     ORDEN_POR_DEFECTO = "Título (A-Z)"
 
-    def insertar(self, libro: Libro, codigo_cdd=None) -> int:
+    def insertar(self, libro: Libro, codigo_cdd=None, organizacion=None) -> int:
         conexion = ConexionDB.conectar()
         try:
             cursor = conexion.cursor()
@@ -55,6 +56,8 @@ class LibroDAO:
                   libro.stock, libro.disponibles, libro.portada))
             if codigo_cdd is not None:
                 cdd.guardar(cursor.lastrowid, codigo_cdd, conexion=conexion)
+            if organizacion is not None:
+                org.guardar(cursor.lastrowid, conexion=conexion, **organizacion)
             conexion.commit()
             return cursor.lastrowid
         finally:
@@ -81,7 +84,7 @@ class LibroDAO:
         finally:
             ConexionDB.cerrar(conexion)
 
-    def actualizar(self, libro: Libro, codigo_cdd=None):
+    def actualizar(self, libro: Libro, codigo_cdd=None, organizacion=None):
         if not libro.id_libro:
             raise ValueError("No se puede actualizar un libro sin id.")
         conexion = ConexionDB.conectar()
@@ -97,6 +100,8 @@ class LibroDAO:
                   libro.stock, libro.disponibles, libro.portada, libro.id_libro))
             if codigo_cdd is not None:
                 cdd.guardar(libro.id_libro, codigo_cdd, conexion=conexion)
+            if organizacion is not None:
+                org.guardar(libro.id_libro, conexion=conexion, **organizacion)
             conexion.commit()
         finally:
             ConexionDB.cerrar(conexion)
@@ -152,7 +157,7 @@ class LibroDAO:
 
     def busqueda_avanzada(self, titulo="", autor="", genero="Todos",
                            ciclo="Todos", edad="Todos", solo_disponibles=False,
-                           orden=None):
+                           orden=None, ubicacion_id=None, etiqueta=None):
         """
         Búsqueda combinable de libros por título, autor, género, ciclo,
         edad recomendada y disponibilidad de stock.
@@ -184,6 +189,17 @@ class LibroDAO:
                 parametros.append(edad)
         if solo_disponibles:
             condiciones.append("disponibles > 0")
+
+        if ubicacion_id == 0:
+            condiciones.append("NOT EXISTS (SELECT 1 FROM libro_organizacion o WHERE o.id_libro=libros.id_libro AND o.id_ubicacion IS NOT NULL)")
+        elif ubicacion_id is not None:
+            condiciones.append("EXISTS (SELECT 1 FROM libro_organizacion o WHERE o.id_libro=libros.id_libro AND o.id_ubicacion=?)")
+            parametros.append(ubicacion_id)
+        if etiqueta == "":
+            condiciones.append("NOT EXISTS (SELECT 1 FROM libro_organizacion o WHERE o.id_libro=libros.id_libro AND o.etiqueta<>'')")
+        elif etiqueta is not None:
+            condiciones.append("EXISTS (SELECT 1 FROM libro_organizacion o WHERE o.id_libro=libros.id_libro AND o.etiqueta=?)")
+            parametros.append(etiqueta)
 
         consulta = f"SELECT {self.COLUMNAS_LISTADO} FROM libros"
         if condiciones:

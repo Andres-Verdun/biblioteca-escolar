@@ -24,6 +24,8 @@ from exportador_pdf import ExportadorPDF
 from conexion import ConexionDB
 import imagenes
 import cdd
+import organizacion as org
+from interfaz_organizacion import InterfazOrganizacion
 
 FORMATO_FECHA = "%d/%m/%Y"
 
@@ -56,7 +58,7 @@ def _datos_columnas_visibles(tabla, filas):
     return encabezados, datos
 
 
-class AplicacionBiblioteca(tk.Tk):
+class AplicacionBiblioteca(InterfazOrganizacion, tk.Tk):
     """Ventana principal del sistema de gestión de biblioteca escolar."""
 
     def __init__(self):
@@ -78,6 +80,7 @@ class AplicacionBiblioteca(tk.Tk):
         self.es_administrador = False
 
         cdd.inicializar()
+        org.inicializar()
         self._crear_menu()
         self._crear_barra_administrador()
 
@@ -89,18 +92,22 @@ class AplicacionBiblioteca(tk.Tk):
         self.tab_docentes = ttk.Frame(self.notebook)
         self.tab_prestamos = ttk.Frame(self.notebook)
         self.tab_busqueda = ttk.Frame(self.notebook)
+        self.tab_ubicaciones = ttk.Frame(self.notebook)
 
         self.notebook.add(self.tab_libros, text="Libros")
         self.notebook.add(self.tab_estudiantes, text="Estudiantes")
         self.notebook.add(self.tab_docentes, text="Docentes")
         self.notebook.add(self.tab_prestamos, text="Préstamos")
         self.notebook.add(self.tab_busqueda, text="Búsqueda avanzada")
+        self.notebook.add(self.tab_ubicaciones, text="Ubicaciones")
 
         self._construir_tab_libros()
         self._construir_tab_estudiantes()
         self._construir_tab_docentes()
         self._construir_tab_prestamos()
         self._construir_tab_busqueda()
+        self._construir_tab_ubicaciones()
+        self._refrescar_ubicaciones()
 
         self._refrescar_libros()
         self._refrescar_estudiantes()
@@ -156,6 +163,10 @@ class AplicacionBiblioteca(tk.Tk):
         try:
             shutil.copy(origen, ConexionDB.obtener_ruta())
             cdd.inicializar()
+            org.inicializar()
+            self._refrescar_ubicaciones()
+            self._limpiar_form_libro()
+            self._limpiar_busqueda()
             messagebox.showinfo(
                 "Restauración completa",
                 "Los datos se restauraron correctamente.",
@@ -294,6 +305,7 @@ class AplicacionBiblioteca(tk.Tk):
         self.var_cdd_descripcion = tk.StringVar(value="Ingrese el CDD impreso en el libro")
         ttk.Label(panel_form, textvariable=self.var_cdd_descripcion, wraplength=470).grid(row=2,column=3,columnspan=5,sticky="w",padx=4)
         self.var_libro_cdd.trace_add('write', lambda *_: self._consultar_cdd())
+        self._campos_organizacion(panel_form)
 
         # --- Vista previa de la portada -------------------------------------
         self._portada_libro_actual = None   # bytes de la tapa cargada en el formulario
@@ -325,9 +337,9 @@ class AplicacionBiblioteca(tk.Tk):
                          variable=self.var_pdf_portadas_libros).pack(side="right", padx=4)
 
         columnas = ("id", "titulo", "autor", "editorial", "isbn", "genero", "edad",
-                    "ciclo", "stock", "disponibles", "tapa", "cdd", "clasificacion")
+                    "ciclo", "stock", "disponibles", "tapa", "cdd", "clasificacion", "ubicacion", "etiqueta_color")
         encabezados = ("ID", "Título", "Autor", "Editorial", "ISBN", "Género", "Edad",
-                       "Ciclo", "Stock", "Disp.", "Tapa", "CDD", "Clasificación")
+                       "Ciclo", "Stock", "Disp.", "Tapa", "CDD", "Clasificación", "Ubicación", "Etiqueta de color")
         marco_tabla = ttk.Frame(contenedor)
         marco_tabla.pack(fill="both", expand=True, padx=8, pady=(0, 8))
         self.tabla_libros = ttk.Treeview(marco_tabla, columns=columnas, show="headings", height=14)
@@ -339,7 +351,10 @@ class AplicacionBiblioteca(tk.Tk):
         self.tabla_libros.column("tapa", width=60, anchor="center")
         self.tabla_libros.column("cdd", width=110, anchor="w", stretch=False)
         self.tabla_libros.column("clasificacion", width=300, anchor="w")
+        self.tabla_libros.column("ubicacion", width=180, anchor="w")
+        self.tabla_libros.column("etiqueta_color", width=250, anchor="w")
         self._configurar_tabla_columnas(marco_tabla, self.tabla_libros, panel_botones)
+        ttk.Button(panel_botones, text="Imprimir etiquetas…", command=lambda: self._imprimir_etiquetas(self.tabla_libros)).pack(side="left", padx=4)
         self.tabla_libros.bind("<<TreeviewSelect>>", self._seleccionar_libro)
 
     # ------------------------------------------------------------------
@@ -455,6 +470,7 @@ class AplicacionBiblioteca(tk.Tk):
                     self.var_libro_ciclo, self.var_libro_stock):
             var.set("")
         self.var_libro_cdd.set("")
+        self._limpiar_organizacion()
         self._consultar_cdd()
         self._quitar_portada()
         self.tabla_libros.selection_remove(self.tabla_libros.selection())
@@ -484,7 +500,7 @@ class AplicacionBiblioteca(tk.Tk):
             messagebox.showerror("CDD", "El código CDD tiene un formato inválido.")
             return
         try:
-            self.libro_dao.insertar(libro, codigo_cdd=self.var_libro_cdd.get())
+            self.libro_dao.insertar(libro, codigo_cdd=self.var_libro_cdd.get(), organizacion=self._leer_organizacion())
         except Exception as error:
             messagebox.showerror("Error al guardar", f"No se pudo agregar el libro. "
                                                        f"Verifique que el ISBN no esté duplicado.\n{error}")
@@ -517,7 +533,7 @@ class AplicacionBiblioteca(tk.Tk):
             messagebox.showerror("CDD", "El código CDD tiene un formato inválido.")
             return
         try:
-            self.libro_dao.actualizar(libro, codigo_cdd=self.var_libro_cdd.get())
+            self.libro_dao.actualizar(libro, codigo_cdd=self.var_libro_cdd.get(), organizacion=self._leer_organizacion())
         except Exception as error:
             messagebox.showerror("Error al guardar", f"No se pudo modificar el libro.\n{error}")
             return
@@ -563,6 +579,7 @@ class AplicacionBiblioteca(tk.Tk):
         self.var_libro_ciclo.set(valores[7])
         self.var_libro_stock.set(valores[8])
         self.var_libro_cdd.set(cdd.obtener(self._id_libro_seleccionado))
+        self._cargar_organizacion(self._id_libro_seleccionado)
         self._consultar_cdd()
 
         # La imagen se pide recién ahora (los listados no la traen, para no
@@ -573,9 +590,11 @@ class AplicacionBiblioteca(tk.Tk):
 
     def _filas_libros(self, libros):
         codigos = cdd.obtener_codigos()
+        organizaciones = org.obtener_todos()
         clasificaciones = {}
         for libro in libros:
             codigo = codigos.get(libro.id_libro, "")
+            organizacion = organizaciones.get(libro.id_libro, {})
             if codigo not in clasificaciones:
                 if not codigo:
                     clasificaciones[codigo] = ""
@@ -588,9 +607,11 @@ class AplicacionBiblioteca(tk.Tk):
                 libro.id_libro, libro.titulo, libro.autor, libro.editorial, libro.isbn,
                 libro.genero, libro.edad_recomendada, libro.ciclo, libro.stock, libro.disponibles,
                 "Sí" if libro.tiene_portada() else "-", codigo, clasificaciones[codigo],
+                organizacion.get("ubicacion", ""), org.nombre_etiqueta(organizacion.get("etiqueta", "")),
             )
 
     def _refrescar_libros(self):
+        self._refrescar_ubicaciones()
         for fila in self.tabla_libros.get_children():
             self.tabla_libros.delete(fila)
         for fila in self._filas_libros(self.libro_dao.obtener_todos()):
@@ -1112,6 +1133,8 @@ class AplicacionBiblioteca(tk.Tk):
         ttk.Label(panel_filtros, text="(también puede ordenar haciendo clic en el título de cada columna)",
                   foreground="#666666").grid(row=2, column=2, columnspan=4, sticky="w", padx=4, pady=4)
 
+        self._filtros_organizacion(panel_filtros)
+
         panel_botones = ttk.Frame(contenedor)
         panel_botones.pack(fill="x", padx=8, pady=(0, 8))
         ttk.Button(panel_botones, text="Buscar", command=self._ejecutar_busqueda).pack(side="left", padx=4)
@@ -1123,9 +1146,9 @@ class AplicacionBiblioteca(tk.Tk):
                          variable=self.var_pdf_portadas_busqueda).pack(side="right", padx=4)
 
         columnas = ("id", "titulo", "autor", "editorial", "isbn", "genero", "edad",
-                    "ciclo", "stock", "disponibles", "tapa", "cdd", "clasificacion")
+                    "ciclo", "stock", "disponibles", "tapa", "cdd", "clasificacion", "ubicacion", "etiqueta_color")
         encabezados = ("ID", "Título", "Autor", "Editorial", "ISBN", "Género", "Edad",
-                       "Ciclo", "Stock", "Disp.", "Tapa", "CDD", "Clasificación")
+                       "Ciclo", "Stock", "Disp.", "Tapa", "CDD", "Clasificación", "Ubicación", "Etiqueta de color")
         # Columnas cuyo encabezado permite reordenar los resultados, y el
         # criterio de ORDENES_BUSQUEDA al que corresponde cada una.
         orden_por_columna = {
@@ -1153,7 +1176,10 @@ class AplicacionBiblioteca(tk.Tk):
         self.tabla_busqueda.column("tapa", width=60, anchor="center")
         self.tabla_busqueda.column("cdd", width=110, anchor="w", stretch=False)
         self.tabla_busqueda.column("clasificacion", width=300, anchor="w")
+        self.tabla_busqueda.column("ubicacion", width=180, anchor="w")
+        self.tabla_busqueda.column("etiqueta_color", width=250, anchor="w")
         self._configurar_tabla_columnas(marco_tabla, self.tabla_busqueda, panel_botones)
+        ttk.Button(panel_botones, text="Imprimir etiquetas…", command=lambda: self._imprimir_etiquetas(self.tabla_busqueda)).pack(side="left", padx=4)
         self.tabla_busqueda.bind("<<TreeviewSelect>>", self._seleccionar_libro_busqueda)
 
     def _configurar_tabla_columnas(self, marco, tabla, panel_botones):
@@ -1226,6 +1252,8 @@ class AplicacionBiblioteca(tk.Tk):
         self.var_busq_genero.set("Todos")
         self.var_busq_ciclo.set("Todos")
         self.var_busq_edad.set("Todos")
+        self.var_busq_ubicacion.set("Todas")
+        self.var_busq_etiqueta.set("Todas")
         self.var_busq_disponibles.set(False)
         self.var_busq_orden.set(ORDENES_BUSQUEDA[0])
         self._mostrar_portada(self.lbl_portada_busqueda, None, "_imagen_portada_busqueda")
@@ -1241,6 +1269,8 @@ class AplicacionBiblioteca(tk.Tk):
             edad=self.var_busq_edad.get(),
             solo_disponibles=self.var_busq_disponibles.get(),
             orden=self.var_busq_orden.get(),
+            ubicacion_id=self._filtro_ubicacion(),
+            etiqueta=self._filtro_etiqueta(),
         )
         for fila in self.tabla_busqueda.get_children():
             self.tabla_busqueda.delete(fila)

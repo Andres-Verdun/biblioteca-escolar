@@ -64,7 +64,7 @@ class ListadosPDFTest(unittest.TestCase):
         for tabla in [self.app.tabla_libros, self.app.tabla_busqueda]:
             filas = [tabla.item(i, 'values') for i in tabla.get_children()]
             fila = next(f for f in filas if int(f[0]) == self.id)
-            self.assertEqual(fila[-2:], ('306.43', 'Sociología de la educación'))
+            self.assertEqual(fila[11:13], ('306.43', 'Sociología de la educación'))
         self.app.var_busq_ciclo.set('Tercer Ciclo')
         self.app._ejecutar_busqueda(False)
         self.assertEqual(len(self.app.tabla_busqueda.get_children()), 1)

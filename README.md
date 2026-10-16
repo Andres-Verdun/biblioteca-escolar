@@ -165,3 +165,86 @@ La primera opción vacía del desplegable permite quitar un género asignado.
 Se conserva la compatibilidad con las bases existentes: el valor sin género
 se guarda como texto vacío, sin reconstruir tablas ni modificar otros datos.
 Los libros sin género se incluyen al buscar con el filtro **Todos**.
+
+## Rama Ubicaciones-Etiquetas
+
+Incluye todos los cambios de Notaciones-CDD hasta el género opcional.
+
+### Ubicaciones reutilizables
+
+1. Abrir la pestaña **Ubicaciones**, escribir un nombre (por ejemplo,
+   Estante azul) y presionar **Crear ubicación**.
+2. En **Libros**, seleccionar o agregar un libro y elegir su **Ubicación**.
+3. Guardar con **Agregar** o **Modificar**. La ubicación es opcional.
+
+Varias obras pueden compartir una ubicación. Renombrar un lugar actualiza
+el nombre en todos sus libros vinculados. Sólo se pueden eliminar lugares
+sin títulos asignados: primero reubicar sus libros o dejar la ubicación vacía.
+Renombrar y eliminar requieren el modo administrador existente del programa.
+Las ubicaciones no distinguen mayúsculas/minúsculas para evitar duplicados.
+Cada registro del catálogo conserva una ubicación; los ejemplares agrupados
+en ese registro comparten ese dato.
+
+### Clasificación por colores de Neuquén
+
+La clasificación cromática se elige manualmente y es independiente del CDD,
+del género y de la ubicación. No se asigna automáticamente desde el código.
+La referencia es el documento aportado por el usuario,
+CLASIFICACION-COLORES-Bibliotecas-Neuquen-.docx-1.pdf, páginas 3, 5 y 6,
+elaborado por docentes bibliotecarias de escuelas de Neuquén (2023).
+Se utiliza el naranja indicado en la tabla y el ejemplo para las novelas.
+
+| Categoría | Color |
+| --- | --- |
+| Cuento | Amarillo |
+| Novela | Naranja |
+| Poesía y formas poéticas (adivinanzas, canciones, trabalenguas y otras) | Verde claro |
+| Libro álbum | Fucsia |
+| Historieta, manga y novela gráfica | Azul |
+| Mitos, leyendas y fábulas | Rojo |
+| Teatro y títeres | Celeste |
+| Literatura patagónica | Violeta |
+| Antologías | Franjas de los colores elegidos |
+| Producciones de los usuarios | Blanco |
+
+Los cuentos y novelas tienen opciones de terror (**T**) y policial (**P**).
+Al seleccionar **Antologías**, usar **Colores de antología…** para marcar
+los géneros presentes; se requiere al menos un color. La vista previa muestra
+la combinación elegida. Los tonos digitales son representativos y la impresión
+puede variar según la impresora y el papel.
+
+**Ubicación** y **Etiqueta de color** aparecen en los listados de libros y
+búsqueda. Se pueden usar como filtros independientes o combinados, incluidas
+las opciones Sin ubicación y Sin etiqueta. Las columnas pueden ocultarse;
+los reportes PDF siguen respetando las columnas visibles.
+
+### Imprimir etiquetas de libros
+
+1. Seleccionar uno o varios libros guardados en **Libros** o **Búsqueda
+   avanzada** (Ctrl o Mayús para seleccionar varios).
+2. Presionar **Imprimir etiquetas…**. La cola comienza con una etiqueta
+   por título; seleccionar las filas y usar **Cambiar cantidad de seleccionados**
+   para indicar entre 1 y 1000 etiquetas por libro.
+3. Presionar **Generar PDF** y elegir dónde guardarlo.
+
+Cada etiqueta mide exactamente **7 cm de ancho por 2 cm de alto**. El PDF
+usa A4 vertical con dos columnas y once filas (22 etiquetas por página),
+separaciones y bordes finos para recortar. Imprimir al **100 % / Tamaño real**,
+sin ajustar a la página. Es una distribución para hojas A4; no se presupone
+compatibilidad con planchas autoadhesivas precortadas de una marca determinada.
+
+La etiqueta muestra una banda de color (o franjas para antologías), P/T si
+corresponde, categoría, título, CDD y ubicación. Usa los datos **guardados**,
+aunque se hayan ocultado columnas en la tabla. Los textos demasiado largos
+se acortan con puntos suspensivos dentro del tamaño físico; la base conserva
+los valores completos. Se permiten libros pendientes de organizar: sus datos
+faltantes se indican en la etiqueta sin inventar una clasificación.
+
+### Compatibilidad de datos
+
+Las ubicaciones y asignaciones se guardan en tablas nuevas dentro de la misma
+biblioteca.db. No se reconstruye la tabla de libros ni se alteran préstamos,
+portadas, códigos CDD o géneros existentes. Las copias de seguridad contienen
+también las ubicaciones y etiquetas. El guardado de libro, CDD y organización
+comparte una transacción; una asignación inválida revierte toda la operación.
+El EXE debe regenerarse desde esta rama para incorporar las nuevas pantallas.

@@ -25,3 +25,12 @@ en el área 800–899, además de variantes con letras. Se amplían poesía,
 teatro, narrativa, ensayo, cartas, humor, antologías y literatura por países.
 Se admiten auxiliares escolares como S 860[82]-1 y S 860[7/8].
 Las fuentes se registran individualmente. Consultar README.md para el alcance.
+
+Rama Ubicaciones-Etiquetas:
+- Pestaña Ubicaciones para crear, renombrar y eliminar lugares reutilizables.
+- Asignación manual de ubicación y etiqueta de color a cada libro.
+- Colores de Neuquén, variantes P/T y franjas para antologías.
+- Filtros y columnas de ubicación y color.
+- Imprimir etiquetas: PDF A4, etiquetas de 7 x 2 cm, cantidades por título.
+- Imprimir al 100 % / Tamaño real. Los datos deben guardarse antes de imprimir.
+Consultar README.md para las instrucciones completas.

@@ -83,7 +83,7 @@ class ExportadorPDF:
         pesos = {"ID": 0.45, "Título": 2.6, "Autor": 1.8, "Editorial": 1.5,
                  "ISBN": 1.4, "Género": 1.2, "Edad": 0.9, "Ciclo": 1.2,
                  "Stock": 0.55, "Disp.": 0.55, "Tapa": 0.55, "CDD": 1.15,
-                 "Clasificación": 2.6, "Portada": 0.85}
+                 "Clasificación": 2.6, "Ubicación": 1.7, "Etiqueta de color": 2.0, "Portada": 0.85}
         titulos = datos_tabla[0]
         factores = [pesos.get(str(titulo), 1.6) for titulo in titulos]
         preferidos = [documento.width * factor / sum(factores) for factor in factores]
