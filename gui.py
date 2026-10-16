@@ -123,6 +123,8 @@ class AplicacionBiblioteca(InterfazOrganizacion, tk.Tk):
         menu_bd = tk.Menu(menu_barra, tearoff=0)
         menu_bd.add_command(label="Exportar copia de seguridad...", command=self._exportar_backup)
         menu_bd.add_command(label="Importar / Restaurar copia de seguridad...", command=self._importar_backup)
+        menu_bd.add_command(label="Ver ubicación de los datos...", command=lambda:messagebox.showinfo(
+            "Ubicación de los datos", "La base de datos de esta sesión se guarda en:\n\n"+ConexionDB.obtener_ruta()))
         menu_bd.add_separator()
         menu_bd.add_command(label="Salir", command=self.destroy)
         menu_barra.add_cascade(label="Base de datos", menu=menu_bd)

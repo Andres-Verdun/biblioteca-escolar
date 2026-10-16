@@ -1,0 +1,35 @@
+BIBLIOTECA ESCOLAR 360 - VERSION INSTALABLE
+
+Uso: Windows 10/11 de 64 bits. No requiere Python ni acceso a Internet
+para usar el programa instalado. Instalacion para el usuario actual.
+
+DATOS
+El catalogo, las portadas, ubicaciones y prestamos se guardan en:
+%LOCALAPPDATA%\BibliotecaEscolar360\biblioteca.db
+
+El programa se instala por separado en:
+%LOCALAPPDATA%\Programs\BibliotecaEscolar360
+
+Cada usuario de Windows tiene sus propios datos. No es una base compartida
+entre computadoras ni cuentas. Actualizar o desinstalar no elimina los datos.
+No cambie la carpeta del programa a la carpeta de datos.
+
+PASAR LOS DATOS DE LA VERSION ANTERIOR
+1. En la version anterior: Base de datos > Exportar copia de seguridad.
+2. Cierre la version anterior y guarde esa copia en un lugar seguro.
+3. Instale y abra Biblioteca Escolar 360.
+4. Base de datos > Importar / Restaurar copia de seguridad.
+5. Elija la copia. La importacion reemplaza el catalogo de destino.
+6. Compruebe libros, portadas, prestamos y ubicaciones antes de borrar nada.
+Si ya no puede abrir la version anterior, conserve su biblioteca.db original
+(junto al exe anterior o main.py) y seleccione una copia de ese archivo.
+No hay importacion automatica ni se incluye un catalogo personal en el instalador.
+
+ACTUALIZAR
+Exporte una copia de seguridad, cierre el programa y ejecute el nuevo
+instalador con la misma cuenta de Windows. Se conservan los datos.
+La actualizacion no es automatica: se descarga e instala la nueva version.
+
+VER DONDE ESTAN LOS DATOS
+Base de datos > Ver ubicacion de los datos.
+Use las copias de seguridad para trasladarlos a otra computadora.

@@ -87,7 +87,8 @@ Python debe incluir Tkinter. Para Windows, generar el ejecutable con
 rama o regenerar el EXE; el ejecutable anterior no incorpora los cambios.
 
 Antes de actualizar un equipo con datos reales, cerrar la aplicación y hacer
-una copia de `biblioteca.db`. Conservar esa base junto al nuevo ejecutable.
+una copia de `biblioteca.db`. En la versión instalable, importar esa copia
+desde el menú Base de datos; ver la sección Instalador para Windows.
 
 ## Equivalencias complementarias
 
@@ -268,3 +269,63 @@ portadas, códigos CDD o géneros existentes. Las copias de seguridad contienen
 también las ubicaciones y etiquetas. El guardado de libro, CDD y organización
 comparte una transacción; una asignación inválida revierte toda la operación.
 El EXE debe regenerarse desde esta rama para incorporar las nuevas pantallas.
+
+## Instalador para Windows (rama Instalador-Windows)
+
+Incluye todos los cambios de `Ubicaciones-Etiquetas`. Preparado para Windows
+10/11 x64, instalación por usuario sin permisos de administrador. No requiere
+Python ni conexión a Internet en la computadora donde se usa el programa.
+
+### Generarlo en tu computadora
+
+1. Instalar **Python 3.12 de 64 bits**, con el lanzador `py`, e Inno Setup 7
+   (también compatible con Inno Setup 6.3 o posterior).
+2. Obtener esta rama con `git fetch origin` y `git switch Instalador-Windows`.
+3. Cerrar Biblioteca Escolar y ejecutar **crear_instalador.bat** con doble clic.
+   Se necesita Internet para descargar las dependencias de compilación.
+4. Se genera `instaladores/BibliotecaEscolar360-Instalador-1.0.0-x64.exe`.
+   Ese es el único archivo que se entrega a la bibliotecaria.
+
+El proceso crea `.venv-build`, separado de tu `.venv`. Para generar solamente
+el ejecutable, usar `crear_exe.bat`. Si el compilador no se detecta, abrir
+`instalador/BibliotecaEscolar360.iss` en Inno Setup y pulsar **Build → Compile**
+(F9), después de generar el ejecutable. Para instalaciones de Inno Setup en
+otra carpeta, se puede definir `BIBLIOTECA_ISCC` con la ruta de `ISCC.exe`.
+El script `.iss` siempre usa rutas relativas a su propia carpeta.
+
+### Generarlo con GitHub Actions
+
+Cada push a esta rama ejecuta **Crear instalador Windows** en un runner de
+Windows. También se puede ejecutar desde Actions → Crear instalador Windows →
+Run workflow cuando el flujo esté disponible en la rama predeterminada.
+Ejecuta las pruebas, compila y comprueba la instalación, reinstalación y
+persistencia de datos después de desinstalar. Si termina correctamente, descargar
+el artefacto **BibliotecaEscolar360-Instalador-Windows-x64** al final de la ejecución
+(se requiere iniciar sesión en GitHub). El ZIP contiene el instalador.
+No publica Releases ni modifica `main`. El artefacto se conserva 30 días.
+Para distribuir una versión definitiva se puede adjuntar el instalador a una
+GitHub Release después de probarlo en la computadora de destino.
+
+### Datos y actualizaciones
+
+- Programa: `%LOCALAPPDATA%\Programs\BibliotecaEscolar360`.
+- Datos: `%LOCALAPPDATA%\BibliotecaEscolar360\biblioteca.db`.
+- Al ejecutar `python main.py`, se sigue usando la base junto al código.
+- Para ver la ruta activa: **Base de datos → Ver ubicación de los datos**.
+- No se incluye ninguna base real ni se copian datos automáticamente desde
+  ejecutables anteriores. Exportar una copia desde la versión anterior e
+  importarla en la instalada. Conservar el original hasta comprobar los datos.
+- El instalador actualiza archivos del programa; no escribe ni elimina la base,
+  incluso al desinstalar. Conservar el mismo `AppId` y aumentar `MyAppVersion`
+  en el `.iss` para siguientes versiones. Exportar una copia antes de actualizar.
+- Cada cuenta de Windows tiene su propio catálogo. No hay sincronización entre
+  computadoras ni actualización automática del programa.
+
+El instalador todavía no tiene firma digital propia. Windows puede mostrar
+un aviso de editor desconocido; esto no equivale a que el archivo esté firmado
+por Inno Setup. La firma de Inno Setup solo corresponde a su propio compilador.
+
+La compilación de un `.exe` de Windows se hace en Windows. Las pruebas locales
+en Linux no sustituyen la prueba del instalador en Windows. El script de CI
+`instalador/verificar_instalador.ps1` rechaza ejecutarse fuera de GitHub Actions
+para no utilizar datos reales del usuario.
