@@ -31,7 +31,7 @@ def _texto(c, texto, x, y, ancho, fuente='Helvetica', tamano=8):
 def generar(ruta, etiquetas):
     """Cada elemento es un dict con titulo, codigo, ubicacion, etiqueta y franjas."""
     if not etiquetas:
-        raise ValueError('Seleccione al menos un libro para imprimir etiquetas.')
+        raise ValueError('Agregue al menos una etiqueta para imprimir.')
     # Validar todo antes de crear el archivo.
     for item in etiquetas:
         org.validar(etiqueta=item.get('etiqueta',''), franjas=item.get('franjas',[]))
@@ -70,6 +70,9 @@ def generar(ruta, etiquetas):
         tx=x+banda+2*mm
         ancho=ANCHO-banda-4*mm
         categoria=org.ETIQUETAS[clave][0] if clave else 'Sin etiqueta de color'
+        if item.get('libre'):
+            _texto(c,categoria,tx,y+ALTO/2-3,ancho,'Helvetica-Bold',9)
+            continue
         _texto(c,categoria,tx,y+ALTO-10,ancho,'Helvetica-Bold',7)
         _texto(c,item.get('titulo',''),tx,y+ALTO-22,ancho,'Helvetica',7.5)
         _texto(c,'CDD: '+(item.get('codigo') or '-'),tx,y+ALTO-34,ancho,'Helvetica-Bold',8)

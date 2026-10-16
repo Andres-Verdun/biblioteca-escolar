@@ -154,5 +154,55 @@ class InterfazOrganizacionTest(unittest.TestCase):
             boton.invoke()
         with fitz.open(ruta) as pdf:self.assertEqual(pdf[0].get_text().count('CDD: 863.9282'),2)
 
+    def test_imprimir_por_tipo_sin_seleccionar_libros(self):
+        a=self.app
+        a._imprimir_etiquetas(a.tabla_libros)
+        ventana=next(w for w in a.winfo_children() if w.winfo_class()=='Toplevel')
+        def descendientes(w):
+            for h in w.winfo_children():
+                yield h
+                yield from descendientes(h)
+        widgets=list(descendientes(ventana))
+        modos=next(w for w in widgets if w.winfo_class()=='TNotebook')
+        self.assertEqual(modos.tab(modos.select(),'text'),'Por tipo y cantidad')
+        combo=next(w for w in widgets if w.winfo_class()=='TCombobox')
+        cantidad=next(w for w in widgets if w.winfo_class()=='TSpinbox')
+        agregar=next(w for w in widgets if w.winfo_class()=='TButton' and w['text']=='Agregar a la lista')
+        combo.set(org.nombre_etiqueta('cuento_terror'))
+        cantidad.set('20')
+        agregar.invoke()
+        combo.set(org.nombre_etiqueta('poesia'))
+        cantidad.set('3')
+        agregar.invoke()
+        boton=next(w for w in widgets if w.winfo_class()=='TButton' and w['text']=='Generar PDF por tipo')
+        ruta=str(Path(self.tmp.name)/'por_tipo.pdf')
+        with patch('interfaz_organizacion.filedialog.asksaveasfilename',return_value=ruta),patch('interfaz_organizacion.messagebox.showinfo'):
+            boton.invoke()
+        with fitz.open(ruta) as pdf:
+            texto=''.join(p.get_text() for p in pdf)
+            self.assertEqual(len(pdf),2)
+            self.assertEqual(texto.count('Cuento de terror'),20)
+            self.assertEqual(texto.count('Poesía y formas poéticas'),3)
+            self.assertNotIn('CDD:',texto)
+            self.assertNotIn('Ubic.',texto)
+            self.assertNotIn('Una novela',texto)
+        self.assertEqual(org.obtener(self.id)['etiqueta'],'')
+
+    def test_etiquetas_libres_validacion_y_antologias(self):
+        ruta=str(Path(self.tmp.name)/'libres.pdf')
+        for pedido in ([],[{'etiqueta':'cuento','cantidad':0}],
+                       [{'etiqueta':'cuento','cantidad':1001}],
+                       [{'etiqueta':'antologia','cantidad':1}],
+                       [{'etiqueta':'inexistente','cantidad':1}]):
+            with self.subTest(pedido=pedido),self.assertRaises(ValueError):
+                self.app._generar_etiquetas_libres(ruta,pedido)
+            self.assertFalse(Path(ruta).exists())
+        self.app._generar_etiquetas_libres(ruta,[
+            {'etiqueta':'antologia','franjas':['amarillo','verde'],'cantidad':2}])
+        with fitz.open(ruta) as pdf:
+            self.assertEqual(pdf[0].get_text().count('Antologías'),2)
+            rectangulos=[d['rect'] for d in pdf[0].get_drawings() if abs(d['rect'].width-70*72/25.4)<.01 and abs(d['rect'].height-20*72/25.4)<.01]
+            self.assertTrue(rectangulos)
+
 
 if __name__=='__main__':unittest.main()

@@ -209,16 +209,20 @@ class InterfazOrganizacion:
     def _imprimir_etiquetas(self,tabla):
         """Prepara una cola con cantidades independientes por título."""
         seleccion=tabla.selection()
-        if not seleccion:
-            messagebox.showwarning('Etiquetas','Seleccione uno o varios libros de la tabla (Ctrl o Mayús).')
-            return
         ventana=tk.Toplevel(self)
         ventana.title('Imprimir etiquetas de 7 × 2 cm')
-        ventana.geometry('760x460')
+        ventana.geometry('800x600')
         ventana.transient(self)
         ventana.grab_set()
-        ttk.Label(ventana,text='Elegí la cantidad por libro. Se usarán los datos guardados del catálogo.').pack(pady=10)
-        marco=ttk.Frame(ventana)
+        modos=ttk.Notebook(ventana)
+        modos.pack(fill='both',expand=True,padx=8,pady=8)
+        libros=ttk.Frame(modos)
+        libres=ttk.Frame(modos)
+        modos.add(libros,text='Libros seleccionados')
+        modos.add(libres,text='Por tipo y cantidad')
+        ttk.Label(libros,text='Elegí la cantidad por libro. Se usarán los datos guardados del catálogo.' if seleccion
+            else 'Para este modo, seleccioná libros en el catálogo y volvé a abrir Imprimir etiquetas.').pack(pady=10)
+        marco=ttk.Frame(libros)
         marco.pack(fill='both',expand=True,padx=12)
         cola=ttk.Treeview(marco,columns=('titulo','cantidad'),show='headings',height=12)
         cola.heading('titulo',text='Libro')
@@ -239,10 +243,13 @@ class InterfazOrganizacion:
                 initialvalue=1,minvalue=1,maxvalue=1000,parent=ventana)
             if valor is not None:
                 for iid in ids:cola.set(iid,'cantidad',valor)
-        ttk.Button(ventana,text='Cambiar cantidad de seleccionados',command=cantidad).pack(pady=6)
+        ttk.Button(libros,text='Cambiar cantidad de seleccionados',command=cantidad).pack(pady=6)
         ttk.Label(ventana,text='A4 · 22 etiquetas por hoja · Imprimir al 100 % / Tamaño real, sin ajustar.').pack(pady=4)
         def exportar():
             pedido={int(i):int(cola.set(i,'cantidad')) for i in cola.get_children()}
+            if not pedido:
+                messagebox.showwarning('Etiquetas','No hay libros seleccionados. Puede usar Por tipo y cantidad.',parent=ventana)
+                return
             ruta=filedialog.asksaveasfilename(parent=ventana,title='Guardar etiquetas',defaultextension='.pdf',
                 initialfile='etiquetas_biblioteca.pdf',filetypes=[('PDF','*.pdf')])
             if not ruta:return
@@ -253,7 +260,89 @@ class InterfazOrganizacion:
                 return
             messagebox.showinfo('Etiquetas','PDF generado. Imprimí al 100 % / Tamaño real.',parent=ventana)
             ventana.destroy()
-        ttk.Button(ventana,text='Generar PDF',command=exportar).pack(pady=10)
+        ttk.Button(libros,text='Generar PDF',command=exportar).pack(pady=10)
+        self._panel_etiquetas_libres(libres,ventana)
+        if not seleccion:modos.select(libres)
+
+    def _panel_etiquetas_libres(self,panel,ventana):
+        ttk.Label(panel,text='Elegí tipos y cantidades. Estas etiquetas no se vinculan a ningún libro.').pack(pady=10)
+        formulario=ttk.Frame(panel)
+        formulario.pack(fill='x',padx=12)
+        tipo=tk.StringVar(value=org.nombre_etiqueta('cuento'))
+        cantidad=tk.StringVar(value='1')
+        ttk.Label(formulario,text='Etiqueta').grid(row=0,column=0,sticky='w')
+        ttk.Combobox(formulario,textvariable=tipo,values=list(self._claves_por_etiqueta),
+            state='readonly',width=48).grid(row=0,column=1,padx=6,pady=6)
+        ttk.Label(formulario,text='Cantidad').grid(row=0,column=2)
+        ttk.Spinbox(formulario,from_=1,to=1000,textvariable=cantidad,width=6).grid(row=0,column=3,padx=6)
+        franjas=ttk.LabelFrame(panel,text='Colores para antologías (elegí al menos uno)')
+        variables={k:tk.BooleanVar(value=False) for k in org.COLORES}
+        for n,(clave,(nombre,color)) in enumerate(org.COLORES.items()):
+            ttk.Checkbutton(franjas,text=nombre,variable=variables[clave]).grid(row=n//5,column=n%5,padx=5,pady=3,sticky='w')
+        def mostrar_franjas(*_):
+            if self._claves_por_etiqueta.get(tipo.get())=='antologia':franjas.pack(after=formulario,fill='x',padx=12,pady=6)
+            else:franjas.pack_forget()
+        tipo.trace_add('write',mostrar_franjas)
+        marco=ttk.Frame(panel)
+        cola=ttk.Treeview(marco,columns=('tipo','cantidad'),show='headings',height=8)
+        cola.heading('tipo',text='Etiqueta y colores')
+        cola.heading('cantidad',text='Cantidad')
+        cola.column('tipo',width=570)
+        cola.column('cantidad',width=90,stretch=False)
+        pedidos={}
+        def agregar():
+            try:
+                n=int(cantidad.get())
+                clave=self._claves_por_etiqueta[tipo.get()]
+                colores=[k for k,v in variables.items() if v.get()]
+                datos=org.validar(etiqueta=clave,franjas=colores)
+                if not 1<=n<=1000:raise ValueError('Indique entre 1 y 1000 etiquetas por tipo.')
+            except (ValueError,KeyError) as error:
+                messagebox.showwarning('Etiquetas',str(error),parent=ventana)
+                return
+            nombre=tipo.get()
+            if clave=='antologia':nombre+=': '+', '.join(org.COLORES[k][0] for k in datos['franjas'])
+            iid=cola.insert('','end',values=(nombre,n))
+            pedidos[iid]=dict(etiqueta=clave,franjas=datos['franjas'],cantidad=n)
+        def quitar():
+            for iid in cola.selection():
+                cola.delete(iid)
+                pedidos.pop(iid)
+        botones=ttk.Frame(panel)
+        botones.pack(fill='x',padx=12,pady=6)
+        ttk.Button(botones,text='Agregar a la lista',command=agregar).pack(side='left',padx=4)
+        ttk.Button(botones,text='Quitar seleccionadas',command=quitar).pack(side='left',padx=4)
+        marco.pack(fill='both',expand=True,padx=12)
+        cola.pack(side='left',fill='both',expand=True)
+        barra=ttk.Scrollbar(marco,orient='vertical',command=cola.yview)
+        barra.pack(side='right',fill='y')
+        cola.configure(yscrollcommand=barra.set)
+        def exportar():
+            if not pedidos:
+                messagebox.showwarning('Etiquetas','Agregue al menos un tipo a la lista.',parent=ventana)
+                return
+            ruta=filedialog.asksaveasfilename(parent=ventana,title='Guardar etiquetas por tipo',
+                defaultextension='.pdf',initialfile='etiquetas_por_tipo.pdf',filetypes=[('PDF','*.pdf')])
+            if not ruta:return
+            try:self._generar_etiquetas_libres(ruta,list(pedidos.values()))
+            except (ValueError,OSError) as error:
+                messagebox.showerror('Etiquetas',str(error),parent=ventana)
+                return
+            messagebox.showinfo('Etiquetas','PDF generado. Imprimí al 100 % / Tamaño real.',parent=ventana)
+            ventana.destroy()
+        ttk.Button(panel,text='Generar PDF por tipo',command=exportar).pack(pady=10)
+
+    def _generar_etiquetas_libres(self,ruta,pedidos):
+        etiquetas=[]
+        for pedido in pedidos:
+            n=pedido.get('cantidad')
+            if type(n) is not int or not 1<=n<=1000:
+                raise ValueError('Indique entre 1 y 1000 etiquetas por tipo.')
+            if not pedido.get('etiqueta'):
+                raise ValueError('Seleccione un tipo de etiqueta.')
+            datos=org.validar(etiqueta=pedido['etiqueta'],franjas=pedido.get('franjas',[]))
+            etiquetas.extend([dict(etiqueta=datos['etiqueta'],franjas=datos['franjas'],libre=True)]*n)
+        generar(ruta,etiquetas)
 
     def _generar_etiquetas(self,ruta,pedido):
         if not pedido or any(not isinstance(n,int) or not 1<=n<=1000 for n in pedido.values()):

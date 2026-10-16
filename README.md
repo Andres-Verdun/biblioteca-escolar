@@ -187,6 +187,13 @@ en ese registro comparten ese dato.
 
 ### Clasificación por colores de Neuquén
 
+En **Imprimir etiquetas → Por tipo y cantidad** se pueden elegir etiquetas
+de cualquier tipo y sus cantidades (1 a 1000 por entrada), agregar varios tipos
+a una lista y generar un PDF sin seleccionar ni modificar libros. Para antologías
+se eligen sus colores. Estas etiquetas contienen la categoría y banda cromática,
+sin título, CDD ni ubicación. Conservan las medidas de 7 × 2 cm, con 22 por hoja A4.
+La pestaña **Libros seleccionados** conserva la impresión con datos del catálogo.
+
 Al introducir un CDD, el catálogo propone una etiqueta de color para poesía,
 teatro, cuentos y narrativa (para esta última propone Novela). La bibliotecaria
 puede cambiarla o dejarla vacía; su elección se conserva al editar el CDD y al
