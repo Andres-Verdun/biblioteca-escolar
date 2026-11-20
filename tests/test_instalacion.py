@@ -24,6 +24,13 @@ class InstalacionTest(unittest.TestCase):
                 with patch.object(sys,'frozen',True,create=True),patch.object(sys,'platform','win32'),patch.object(sys,'executable',str(Path(tmp)/ejecutable)),patch.dict(os.environ,{'LOCALAPPDATA':tmp}):
                     self.assertEqual(conexion._obtener_directorio_base(),str(Path(tmp)/'BibliotecaEscolar360'))
 
+    def test_ejecutable_portatil_reutiliza_bd_existente(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            ruta = Path(tmp) / 'BibliotecaEscolar.exe'
+            (Path(tmp) / 'biblioteca.db').write_bytes(b'base de ejemplo')
+            with patch.object(sys,'frozen',True,create=True),patch.object(sys,'platform','win32'),patch.object(sys,'executable',str(ruta)),patch.dict(os.environ,{'LOCALAPPDATA':str(Path(tmp)/'AppData')}):
+                self.assertEqual(conexion._obtener_directorio_base(),str(Path(tmp)))
+
     def test_fallback_sin_localappdata(self):
         with patch.object(sys,'frozen',True,create=True),patch.object(sys,'platform','win32'),patch.dict(os.environ,{},clear=True),patch('os.path.expanduser',return_value='/perfil'):
             self.assertEqual(conexion._obtener_directorio_base(),os.path.join('/perfil','AppData','Local','BibliotecaEscolar360'))
