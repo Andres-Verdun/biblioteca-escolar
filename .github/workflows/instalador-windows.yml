@@ -1,7 +1,9 @@
 name: Crear instalador Windows
 on:
   push:
-    branches: [Instalador-Windows]
+    branches: [integracion-completa-biblioteca]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 permissions:
   contents: read
@@ -19,6 +21,7 @@ jobs:
         run: |
           python -m pip install -r requirements-build.txt pymupdf
           python -m unittest discover -s tests
+          python -m unittest test_tejuelos
       - name: Generar ejecutable
         run: python -m PyInstaller --noconfirm --clean BibliotecaEscolar.spec
       - name: Generar instalador con Inno Setup
