@@ -286,7 +286,7 @@ Python ni conexión a Internet en la computadora donde se usa el programa.
 4. Se genera `instaladores/BibliotecaEscolar360-Instalador-1.0.0-x64.exe`.
    Ese es el único archivo que se entrega a la bibliotecaria.
 
-El proceso crea `.venv-build`, separado de tu `.venv`. Para generar solamente
+El proceso reutiliza un entorno de compilación permanente en `%LOCALAPPDATA%\\BibliotecaEscolar360\\venv-build-312`, aunque vuelvas a descargar el proyecto. Para generar solamente
 el ejecutable, usar `crear_exe.bat`. Si el compilador no se detecta, abrir
 `instalador/BibliotecaEscolar360.iss` en Inno Setup y pulsar **Build → Compile**
 (F9), después de generar el ejecutable. Para instalaciones de Inno Setup en
@@ -329,3 +329,30 @@ La compilación de un `.exe` de Windows se hace en Windows. Las pruebas locales
 en Linux no sustituyen la prueba del instalador en Windows. El script de CI
 `instalador/verificar_instalador.ps1` rechaza ejecutarse fuera de GitHub Actions
 para no utilizar datos reales del usuario.
+
+
+## Consolidación de funciones (versión integrada)
+
+Esta versión reúne las mejoras que antes estaban aisladas en Notaciones-CDD,
+Ubicaciones-Etiquetas e Instalador-Windows, además del nuevo generador de tejuelos
+bibliotecarios.
+
+En **Libros** hay dos herramientas diferentes:
+- **Imprimir etiquetas…**: etiquetas de 7 × 2 cm con clasificación cromática y ubicación.
+- **Generar tejuelos (PDF)**: notación CDD + tres letras del apellido del autor,
+  con registro de catálogo opcional (NO equivale a inventario individual).
+
+La primera herramienta conserva los colores y ubicaciones. La segunda no
+reemplaza el sistema cromático y no modifica la base de datos.
+
+### Datos existentes de otras versiones
+
+Si el ejecutable detecta **biblioteca.db junto a él**, conserva ese archivo en
+esa carpeta (modo compatible con la versión portátil). Si no lo encuentra,
+los datos del ejecutable empaquetado se guardan en la carpeta de datos local
+del usuario indicada arriba. El instalador no copia automáticamente la base
+de otra carpeta: si cambiás al instalador, exportá/importá una copia de
+seguridad desde **Base de datos**.
+
+No borres el archivo biblioteca.db original hasta verificar todo tu catálogo
+y las ubicaciones en la versión nueva.
