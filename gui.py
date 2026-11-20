@@ -21,6 +21,7 @@ from modelos import (
 )
 from dao import LibroDAO, EstudianteDAO, DocenteDAO, PrestamoDAO
 from exportador_pdf import ExportadorPDF
+from dialogo_tejuelos import abrir_dialogo_tejuelos
 from conexion import ConexionDB
 import imagenes
 import cdd
@@ -303,6 +304,8 @@ class AplicacionBiblioteca(tk.Tk):
         ttk.Button(panel_botones, text="Modificar", command=self._modificar_libro).pack(side="left", padx=4)
         ttk.Button(panel_botones, text="Eliminar", command=self._eliminar_libro).pack(side="left", padx=4)
         ttk.Button(panel_botones, text="Limpiar", command=self._limpiar_form_libro).pack(side="left", padx=4)
+        ttk.Button(panel_botones, text="Generar tejuelos (PDF)",
+                   command=lambda: abrir_dialogo_tejuelos(self)).pack(side="left", padx=4)
         ttk.Button(panel_botones, text="Exportar catálogo a PDF",
                    command=self._exportar_libros_pdf).pack(side="right", padx=4)
         self.var_pdf_portadas_libros = tk.BooleanVar(value=False)
