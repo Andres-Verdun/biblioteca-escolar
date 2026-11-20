@@ -1,5 +1,5 @@
 @echo off
-setlocal EnableExtensions
+setlocal EnableExtensions EnableDelayedExpansion
 cd /d "%~dp0"
 if errorlevel 1 goto :error
 
@@ -54,7 +54,7 @@ if not exist "%PYTHON_EXE%" (
         echo Instala Python 3 desde python.org y vuelve a intentar.
         goto :error
     )
-    %PY_LAUNCHER% -m venv "%ENTORNO%"
+    !PY_LAUNCHER! -m venv "%ENTORNO%"
     if errorlevel 1 goto :error
 ) else (
     echo [1/3] Reutilizando el entorno Python permanente.
