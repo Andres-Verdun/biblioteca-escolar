@@ -14,7 +14,7 @@ GENEROS = [
     "Cómic/Historieta", "Divulgación", "Enciclopedia", "Otro",
 ]
 
-CICLOS = ["Inicial", "Primer Ciclo", "Segundo Ciclo"]
+CICLOS = ["Inicial", "Primer Ciclo", "Segundo Ciclo", "Tercer Ciclo"]
 
 EDADES_RECOMENDADAS = ["3-5 años", "6-8 años", "9-11 años", "12-13 años"]
 
@@ -105,9 +105,8 @@ class Libro:
 
     @genero.setter
     def genero(self, valor):
-        if not valor:
-            raise ValueError("Debe seleccionar un género para el libro.")
-        self._genero = valor
+        # Campo opcional: se almacena vacío sin exigir una categoría.
+        self._genero = str(valor).strip() if valor is not None else ""
 
     @property
     def edad_recomendada(self):

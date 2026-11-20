@@ -20,13 +20,21 @@ def _obtener_directorio_base():
     Determina la carpeta donde debe vivir biblioteca.db.
 
     - Si el programa corre como script (.py), es la carpeta del proyecto.
-    - Si el programa corre empaquetado como .exe (PyInstaller), sys.frozen
-      es True y __file__ apunta a una carpeta temporal que se borra al
-      cerrar el programa. En ese caso se usa la carpeta donde está el
-      .exe, para que la base de datos persista entre ejecuciones.
+    - En una instalación nueva, usa los datos locales del usuario.
+    - Si ya existe biblioteca.db junto al ejecutable, respeta esa
+      ubicación de versiones portátiles anteriores.
     """
     if getattr(sys, "frozen", False):
-        return os.path.dirname(sys.executable)
+        # Compatible con instalaciones anteriores: si existe una biblioteca
+        # portátil junto al ejecutable, conservarla en su lugar.
+        carpeta_portatil = os.path.dirname(sys.executable)
+        if os.path.isfile(os.path.join(carpeta_portatil, NOMBRE_BASE_DATOS)):
+            return carpeta_portatil
+        if sys.platform == 'win32':
+            base = os.environ.get('LOCALAPPDATA') or os.path.join(os.path.expanduser('~'), 'AppData', 'Local')
+        else:
+            base = os.environ.get('XDG_DATA_HOME') or os.path.join(os.path.expanduser('~'), '.local', 'share')
+        return os.path.join(base, 'BibliotecaEscolar360')
     return os.path.dirname(os.path.abspath(__file__))
 
 
@@ -35,9 +43,9 @@ class ConexionDB:
     Clase responsable de gestionar la conexión a la base de datos SQLite3
     de forma centralizada y segura.
 
-    La base de datos se guarda como un único archivo (biblioteca.db) en la
-    misma carpeta del programa (o del .exe, si está empaquetado). Esto
-    permite la portabilidad de los datos: copiando ese archivo a otra
+    La base de datos se guarda como un único archivo (biblioteca.db), en
+    datos locales del usuario para la aplicación empaquetada y en la carpeta
+    del proyecto al ejecutar Python. Esto permite la portabilidad copiándolo a otra
     máquina que tenga el sistema instalado, toda la información (libros,
     estudiantes, docentes y préstamos) viaja con él.
     """
@@ -56,6 +64,7 @@ class ConexionDB:
         Habilita el uso de claves foráneas (deshabilitadas por defecto en
         SQLite3) y configura row_factory para acceder a las columnas por nombre.
         """
+        os.makedirs(os.path.dirname(os.path.abspath(cls._ruta_base_datos)), exist_ok=True)
         conexion = sqlite3.connect(cls._ruta_base_datos)
         conexion.execute("PRAGMA foreign_keys = ON;")
         conexion.row_factory = sqlite3.Row

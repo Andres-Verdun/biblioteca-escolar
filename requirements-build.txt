@@ -1,0 +1,4 @@
+# Dependencias de empaquetado; usar Python 3.12 de 64 bits para reproducir el build.
+PyInstaller==6.22.3
+reportlab==4.4.9
+Pillow==12.3.0

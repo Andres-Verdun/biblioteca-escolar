@@ -21,3 +21,8 @@ dist/
 # Base de datos local
 *.db
 *.sqlite3
+.venv-build/
+instaladores/
+*.db-journal
+*.db-wal
+*.db-shm
