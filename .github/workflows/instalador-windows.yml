@@ -1,0 +1,44 @@
+name: Crear instalador Windows
+on:
+  push:
+    branches: [Instalador-Windows]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  instalador:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          architecture: x64
+      - name: Instalar dependencias y ejecutar pruebas
+        run: |
+          python -m pip install -r requirements-build.txt pymupdf
+          python -m unittest discover -s tests
+      - name: Generar ejecutable
+        run: python -m PyInstaller --noconfirm --clean BibliotecaEscolar.spec
+      - name: Generar instalador con Inno Setup
+        shell: pwsh
+        run: |
+          $compilador = Get-ChildItem -Path "${env:ProgramFiles(x86)}\Inno Setup*\ISCC.exe", "$env:ProgramFiles\Inno Setup*\ISCC.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
+          if (!$compilador) {
+            choco install innosetup --yes --no-progress
+            if ($LASTEXITCODE -ne 0) { throw 'No se pudo instalar Inno Setup' }
+            $compilador = Get-ChildItem -Path "${env:ProgramFiles(x86)}\Inno Setup*\ISCC.exe", "$env:ProgramFiles\Inno Setup*\ISCC.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
+          }
+          if (!$compilador) { throw 'No se encontro ISCC.exe' }
+          & $compilador.FullName instalador\BibliotecaEscolar360.iss
+          if ($LASTEXITCODE -ne 0) { throw 'Fallo la compilacion' }
+      - name: Verificar instalacion, actualizacion y desinstalacion
+        shell: pwsh
+        run: ./instalador/verificar_instalador.ps1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: BibliotecaEscolar360-Instalador-Windows-x64
+          path: instaladores/*.exe
+          if-no-files-found: error
+          retention-days: 30
